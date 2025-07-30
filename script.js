@@ -19,36 +19,14 @@ const SUPABASE_URL = 'https://hziwyxbwqcdittvlhijo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6aXd5eGJ3cWNkaXR0dmxoaWpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4ODE0MTksImV4cCI6MjA2OTQ1NzQxOX0.7kFGMEOX23Lg3b4imPalbju8G4yHyReuWBVoXVmvxEA';
 
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// BYPASS LOGIN MODE (for development/testing only)
+document.addEventListener('DOMContentLoaded', () => {
+  // Ẩn section login, hiển thị dashboard
+  document.getElementById('loginSection').classList.add('d-none');
+  document.getElementById('dashboardSection').classList.remove('d-none');
 
-// Lắng nghe nút đăng nhập
-document.addEventListener('DOMContentLoaded', async () => {
-  document.getElementById('btnLogin').addEventListener('click', async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-    });
-    if (error) {
-      alert('Lỗi đăng nhập: ' + error.message);
-      console.error(error);
-    }
-  });
-
-  // Kiểm tra người dùng hiện tại sau khi đăng nhập
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user?.email) {
-    const { data: users } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', session.user.email);
-
-    if (users && users.length > 0) {
-      document.getElementById('loginSection').classList.add('d-none');
-      document.getElementById('dashboardSection').classList.remove('d-none');
-      document.getElementById('userEmail').innerText = session.user.email;
-    } else {
-      alert('Email của bạn không thuộc hệ thống VSEC. Hãy liên hệ admin.');
-      await supabase.auth.signOut();
-    }
-  }
+  // Gán user giả định để hiển thị
+  document.getElementById('userEmail').innerText = 'test.user@vsec.vn';
 });
 
 // Global state
