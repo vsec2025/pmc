@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Management Console</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-XL5J1qZk+8OjRpgMwV0C61kYpuo+f5d7gnn5XD3y3wXHSclpZdw1Hf/hAfp7w7Xa" crossorigin="anonymous">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Navigation bar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">PMC</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0" id="nav-items" style="display: none;">
+          <li class="nav-item"><a class="nav-link active" href="#dashboard-section" data-section="dashboard-section">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="#projects-section" data-section="projects-section">Dự án</a></li>
+          <li class="nav-item"><a class="nav-link" href="#tasks-section" data-section="tasks-section">Công việc</a></li>
+          <li class="nav-item"><a class="nav-link" href="#reports-section" data-section="reports-section">Báo cáo tuần</a></li>
+        </ul>
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item" id="user-info" style="display: none;">
+            <span class="navbar-text me-3" id="user-name"></span>
+            <button class="btn btn-outline-light btn-sm" id="signOutBtn">Đăng xuất</button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Login Section -->
+  <section id="login-section" class="container my-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6 text-center">
+        <h3>Đăng nhập để sử dụng hệ thống</h3>
+        <p class="text-muted">Sử dụng Gmail đã được phê duyệt</p>
+        <button id="loginBtn" class="btn btn-primary btn-lg">Đăng nhập bằng Google</button>
+        <div id="login-error" class="alert alert-danger mt-3 d-none" role="alert"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dashboard Section -->
+  <section id="dashboard-section" class="container my-4" style="display: none;">
+    <h2 class="mb-4">Tổng quan</h2>
+    <div class="row" id="dashboard-cards">
+      <!-- Cards will be populated by JS -->
+    </div>
+    <div class="row mt-4" id="dashboard-today-tasks">
+      <!-- Today's tasks list will be rendered here -->
+    </div>
+  </section>
+
+  <!-- Projects Section -->
+  <section id="projects-section" class="container my-4" style="display: none;">
+    <h2 class="mb-4">Quản lý dự án</h2>
+    <div class="d-flex justify-content-between mb-3">
+      <div>
+        <label for="projectFilter" class="form-label me-2">Lọc theo trạng thái:</label>
+        <select id="projectFilter" class="form-select d-inline-block w-auto">
+          <option value="all" selected>Tất cả</option>
+          <option value="dang thuc hien">Đang thực hiện</option>
+          <option value="da hoan thanh">Đã hoàn thành</option>
+          <option value="tam dung">Tạm dừng</option>
+        </select>
+      </div>
+      <button class="btn btn-success" id="createProjectBtn">Tạo dự án mới</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-striped" id="projectsTable">
+        <thead>
+          <tr>
+            <th>Mã dự án</th>
+            <th>Tên dự án</th>
+            <th>Khách hàng</th>
+            <th>Ngày bắt đầu</th>
+            <th>Ngày kết thúc</th>
+            <th>Trạng thái</th>
+            <th>Tiến độ (%)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <!-- Modal: Create/Update Project -->
+    <div class="modal fade" id="projectModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="projectModalLabel">Tạo Dự án</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="projectForm">
+              <input type="hidden" id="projectIdInput">
+              <div class="mb-3">
+                <label class="form-label">Tên dự án</label>
+                <input type="text" class="form-control" id="projectNameInput" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Khách hàng</label>
+                <input type="text" class="form-control" id="clientNameInput">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Ngày bắt đầu</label>
+                <input type="date" class="form-control" id="startDateInput">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Ngày kết thúc</label>
+                <input type="date" class="form-control" id="endDateInput">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Trạng thái</label>
+                <select class="form-select" id="projectStatusInput">
+                  <option value="dang thuc hien" selected>Đang thực hiện</option>
+                  <option value="da hoan thanh">Đã hoàn thành</option>
+                  <option value="tam dung">Tạm dừng</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Tiến độ (%)</label>
+                <input type="number" class="form-control" id="projectProgressInput" min="0" max="100" step="1" value="0">
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="button" class="btn btn-primary" id="saveProjectBtn">Lưu</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tasks Section -->
+  <section id="tasks-section" class="container my-4" style="display: none;">
+    <h2 class="mb-4">Quản lý công việc</h2>
+    <div class="d-flex justify-content-between mb-3">
+      <div>
+        <label for="taskFilter" class="form-label me-2">Lọc theo trạng thái:</label>
+        <select id="taskFilter" class="form-select d-inline-block w-auto">
+          <option value="all" selected>Tất cả</option>
+          <option value="chua lam">Chưa làm</option>
+          <option value="dang lam">Đang làm</option>
+          <option value="hoan thanh">Hoàn thành</option>
+        </select>
+      </div>
+      <button class="btn btn-success" id="createTaskBtn">Tạo công việc mới</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-striped" id="tasksTable">
+        <thead>
+          <tr>
+            <th>Mã CV</th>
+            <th>Dự án</th>
+            <th>Tên công việc</th>
+            <th>Người thực hiện</th>
+            <th>Deadline</th>
+            <th>Trạng thái</th>
+            <th>Tiến độ (%)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <!-- Modal: Create/Update Task -->
+    <div class="modal fade" id="taskModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="taskModalLabel">Tạo Công việc</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="taskForm">
+              <input type="hidden" id="taskIdInput">
+              <div class="mb-3">
+                <label class="form-label">Dự án</label>
+                <select class="form-select" id="taskProjectSelect" required></select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Tên công việc</label>
+                <input type="text" class="form-control" id="taskNameInput" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Người thực hiện</label>
+                <select class="form-select" id="taskAssigneeSelect" required></select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Deadline</label>
+                <input type="date" class="form-control" id="taskDueDateInput" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Trạng thái</label>
+                <select class="form-select" id="taskStatusInput">
+                  <option value="chua lam" selected>Chưa làm</option>
+                  <option value="dang lam">Đang làm</option>
+                  <option value="hoan thanh">Hoàn thành</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Tiến độ (%)</label>
+                <input type="number" class="form-control" id="taskProgressInput" min="0" max="100" step="1" value="0">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Ghi chú</label>
+                <textarea class="form-control" id="taskNoteInput" rows="2"></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="button" class="btn btn-primary" id="saveTaskBtn">Lưu</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Reports Section -->
+  <section id="reports-section" class="container my-4" style="display: none;">
+    <h2 class="mb-4">Báo cáo tuần</h2>
+    <div class="d-flex justify-content-between mb-3">
+      <button class="btn btn-success" id="createReportBtn">Gửi báo cáo</button>
+      <div id="exportButtons" class="d-none">
+        <button class="btn btn-outline-secondary me-2" id="exportCsvBtn">Xuất CSV</button>
+        <button class="btn btn-outline-secondary" id="exportPdfBtn">Xuất PDF</button>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-striped" id="reportsTable">
+        <thead>
+          <tr>
+            <th>Người báo cáo</th>
+            <th>Tuần</th>
+            <th>Năm</th>
+            <th>Nội dung</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <!-- Modal: Create/Update Report -->
+    <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="reportModalLabel">Gửi Báo cáo tuần</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="reportForm">
+              <div class="mb-3">
+                <label class="form-label">Tuần thứ</label>
+                <input type="number" class="form-control" id="weekNumberInput" min="1" max="53" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Năm</label>
+                <input type="number" class="form-control" id="reportYearInput" min="2020" max="2100" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Nội dung</label>
+                <textarea class="form-control" id="reportSummaryInput" rows="4" required></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+            <button type="button" class="btn btn-primary" id="saveReportBtn">Gửi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="text-center py-4 mt-5 border-top">
+    <small>&copy; 2025 PMC. Thiết kế dành riêng cho nội bộ.</small>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-ZzL8LLFpj3ya+dMRgE9IXjvZSEa3GM2HdOzDEBchX35hbGNi5PZGvpKxY6E4JPpc" crossorigin="anonymous"></script>
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/dist/umd/supabase.min.js"></script>
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
