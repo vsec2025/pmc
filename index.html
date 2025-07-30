@@ -1,95 +1,369 @@
-<section id="reports-section" class="container my-4" style="display: none;">
-  <h2 class="mb-4">Báo cáo</h2>
-  <div class="d-flex justify-content-between mb-3">
-    <div>
-      <button class="btn btn-success me-2" id="createReportBtn">Gửi báo cáo tuần</button>
-      <button class="btn btn-info" id="createDailyReportBtn">Gửi báo cáo ngày</button>
-    </div>
-    <div id="exportButtons" class="d-none">
-      <button class="btn btn-outline-secondary me-2" id="exportCsvBtn">Xuất CSV</button>
-      <button class="btn btn-outline-secondary" id="exportPdfBtn">Xuất PDF</button>
-    </div>
-  </div>
-  <div class="table-responsive">
-    <table class="table table-hover" id="reportsTable"> <thead>
-        <tr>
-          <th>Người báo cáo</th>
-          <th>Tuần</th>
-          <th>Năm</th>
-          <th>Chi tiết</th> </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="reportModalLabel">Gửi Báo cáo tuần</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form id="reportForm">
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Tuần thứ</label>
-                <input type="number" class="form-control" id="weekNumberInput" min="1" max="53" required>
-              </div>
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Năm</label>
-                <input type="number" class="form-control" id="reportYearInput" min="2020" max="2100" required>
-              </div>
-            </div>
-            <hr>
-            <h6 class="mb-3">Chi tiết công việc theo dự án:</h6>
-            <div id="reportDetailsContainer">
-              </div>
-            <button type="button" class="btn btn-outline-success mt-2" id="addProjectToReportBtn">
-              <i class="bi bi-plus-circle"></i> Thêm Dự án
-            </button>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-          <button type="button" class="btn btn-primary" id="saveReportBtn">Gửi</button>
+```html
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PMC - Project Management Console</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+  <nav id="mainNav" class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">PMC</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul id="nav-items" class="navbar-nav me-auto mb-2 mb-lg-0" style="display: none;">
+          <li class="nav-item"><a class="nav-link active" href="#dashboard-section" data-section="dashboard-section">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="#projects-section" data-section="projects-section">Dự án</a></li>
+          <li class="nav-item"><a class="nav-link" href="#tasks-section" data-section="tasks-section">Công việc</a></li>
+          <li class="nav-item"><a class="nav-link" href="#reports-section" data-section="reports-section">Báo cáo</a></li>
+        </ul>
+        <div id="user-info" class="d-flex align-items-center" style="display: none;">
+          <span id="user-name" class="me-3"></span>
+          <button id="signOutBtn" class="btn btn-outline-danger">Đăng xuất</button>
         </div>
       </div>
     </div>
-  </div>
+  </nav>
 
-  <div class="modal fade" id="dailyReportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="dailyReportModalLabel">Gửi Báo cáo ngày</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form id="dailyReportForm">
-            <div class="mb-3">
-              <label class="form-label">Ngày báo cáo</label>
-              <input type="date" class="form-control" id="dailyReportDateInput" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Dự án</label>
-              <select class="form-select" id="dailyReportProjectSelect" required></select>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Nội dung công việc</label>
-              <textarea class="form-control" id="dailyReportSummaryInput" rows="4" required></textarea>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Số giờ hoàn thành (tùy chọn)</label>
-              <input type="number" class="form-control" id="dailyReportHoursInput" min="0" step="0.5">
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-          <button type="button" class="btn btn-primary" id="saveDailyReportBtn">Gửi</button>
+  <main class="container mt-5 pt-5">
+    <section id="login-section" class="row">
+      <div class="col-md-6 offset-md-3">
+        <div class="card">
+          <div class="card-body text-center">
+            <h3>Đăng nhập để sử dụng hệ thống</h3>
+            <p>Sử dụng Gmail đã được phê duyệt</p>
+            <button id="loginBtn" class="btn btn-primary">Đăng nhập bằng Google</button>
+            <div id="login-error" class="alert alert-danger d-none mt-3"></div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-</section>
+    </section>
+
+    <section id="dashboard-section" style="display: none;">
+      <h2>Tổng quan</h2>
+      <div id="dashboard-cards" class="row mb-4"></div>
+      <h4>Công việc hôm nay</h4>
+      <div id="dashboard-today-tasks" class="row"></div>
+    </section>
+
+    <section id="projects-section" style="display: none;">
+      <h2>Quản lý dự án</h2>
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label for="projectFilter">Lọc theo trạng thái:</label>
+          <select id="projectFilter" class="form-select">
+            <option value="all">Tất cả</option>
+            <option value="dang thuc hien">Đang thực hiện</option>
+            <option value="da hoan thanh">Đã hoàn thành</option>
+            <option value="tam dung">Tạm dừng</option>
+          </select>
+        </div>
+      </div>
+      <button id="createProjectBtn" class="btn btn-primary mb-3">Tạo dự án mới</button>
+      <div class="table-responsive">
+        <table id="projectsTable" class="table table-striped">
+          <thead>
+            <tr>
+              <th>Mã dự án</th>
+              <th>Tên dự án</th>
+              <th>Khách hàng</th>
+              <th>Ngày bắt đầu</th>
+              <th>Ngày kết thúc</th>
+              <th>Trạng thái</th>
+              <th>Tiến độ (%)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="modal fade" id="projectModal" tabindex="-1" aria-labelledby="projectModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="projectModalLabel">Tạo Dự án</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form id="projectForm">
+                <input type="hidden" id="projectIdInput">
+                <div class="mb-3">
+                  <label for="projectNameInput" class="form-label">Tên dự án</label>
+                  <input type="text" class="form-control" id="projectNameInput">
+                </div>
+                <div class="mb-3">
+                  <label for="clientNameInput" class="form-label">Khách hàng</label>
+                  <input type="text" class="form-control" id="clientNameInput">
+                </div>
+                <div class="mb-3">
+                  <label for="startDateInput" class="form-label">Ngày bắt đầu</label>
+                  <input type="date" class="form-control" id="startDateInput">
+                </div>
+                <div class="mb-3">
+                  <label for="endDateInput" class="form-label">Ngày kết thúc</label>
+                  <input type="date" class="form-control" id="endDateInput">
+                </div>
+                <div class="mb-3">
+                  <label for="projectStatusInput" class="form-label">Trạng thái</label>
+                  <select id="projectStatusInput" class="form-select">
+                    <option value="dang thuc hien">Đang thực hiện</option>
+                    <option value="da hoan thanh">Đã hoàn thành</option>
+                    <option value="tam dung">Tạm dừng</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="projectProgressInput" class="form-label">Tiến độ (%)</label>
+                  <input type="number" class="form-control" id="projectProgressInput" min="0" max="100">
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+              <button type="button" class="btn btn-primary" id="saveProjectBtn">Lưu</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tasks-section" style="display: none;">
+      <h2>Quản lý công việc</h2>
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label for="taskFilter">Lọc theo trạng thái:</label>
+          <select id="taskFilter" class="form-select">
+            <option value="all">Tất cả</option>
+            <option value="chua lam">Chưa làm</option>
+            <option value="dang lam">Đang làm</option>
+            <option value="hoan thanh">Hoàn thành</option>
+          </select>
+        </div>
+      </div>
+      <button id="createTaskBtn" class="btn btn-primary mb-3">Tạo công việc mới</button>
+      <div class="table-responsive">
+        <table id="tasksTable" class="table table-striped">
+          <thead>
+            <tr>
+              <th>Mã CV</th>
+              <th>Dự án</th>
+              <th>Tên công việc</th>
+              <th>Người thực hiện</th>
+              <th>Deadline</th>
+              <th>Trạng thái</th>
+              <th>Tiến độ (%)</th>
+              <th>Số giờ</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="taskModalLabel">Tạo Công việc</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form id="taskForm">
+                <input type="hidden" id="taskIdInput">
+                <div class="mb-3">
+                  <label for="taskProjectSelect" class="form-label">Dự án</label>
+                  <select id="taskProjectSelect" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                  <label for="taskNameInput" class="form-label">Tên công việc</label>
+                  <input type="text" class="form-control" id="taskNameInput">
+                </div>
+                <div class="mb-3">
+                  <label for="taskAssigneeSelect" class="form-label">Người thực hiện</label>
+                  <select id="taskAssigneeSelect" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                  <label for="taskDueDateInput" class="form-label">Deadline</label>
+                  <input type="date" class="form-control" id="taskDueDateInput">
+                </div>
+                <div class="mb-3">
+                  <label for="taskStatusInput" class="form-label">Trạng thái</label>
+                  <select id="taskStatusInput" class="form-select">
+                    <option value="chua lam">Chưa làm</option>
+                    <option value="dang lam">Đang làm</option>
+                    <option value="hoan thanh">Hoàn thành</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="taskProgressInput" class="form-label">Tiến độ (%)</label>
+                  <input type="number" class="form-control" id="taskProgressInput" min="0" max="100">
+                </div>
+                <div class="mb-3">
+                  <label for="taskHoursWorkedInput" class="form-label">Số giờ làm việc</label>
+                  <input type="number" class="form-control" id="taskHoursWorkedInput" min="0" step="0.5">
+                </div>
+                <div class="mb-3">
+                  <label for="taskNoteInput" class="form-label">Ghi chú</label>
+                  <textarea class="form-control" id="taskNoteInput" rows="4"></textarea>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+              <button type="button" class="btn btn-primary" id="saveTaskBtn">Lưu</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="reports-section" style="display: none;">
+      <h2>Báo cáo</h2>
+      <div class="mb-3">
+        <button id="createReportBtn" class="btn btn-primary me-2">Gửi báo cáo tuần</button>
+        <button id="createDailyReportBtn" class="btn btn-primary me-2">Gửi báo cáo ngày</button>
+        <div id="exportButtons" class="d-inline-block d-none">
+          <button id="exportCsvBtn" class="btn btn-secondary me-2">Xuất CSV</button>
+          <button id="exportPdfBtn" class="btn btn-secondary">Xuất PDF</button>
+        </div>
+        <div id="analysisButtons" class="d-inline-block d-none">
+          <button id="employeeSummaryBtn" class="btn btn-info me-2">Tổng hợp theo nhân viên</button>
+          <button id="projectSummaryBtn" class="btn btn-info">Tổng hợp theo dự án</button>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table id="reportsTable" class="table table-striped">
+          <thead>
+            <tr>
+              <th>Người báo cáo</th>
+              <th>Tuần</th>
+              <th>Năm</th>
+              <th>Dự án</th>
+              <th>Công việc hoàn thành</th>
+              <th>Kế hoạch tuần tới</th>
+              <th>Số giờ</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="reportModalLabel">Gửi Báo cáo tuần</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form id="reportForm">
+                <div class="mb-3">
+                  <label for="reportProjectSelect" class="form-label">Dự án</label>
+                  <select id="reportProjectSelect" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                  <label for="weekNumberInput" class="form-label">Tuần thứ</label>
+                  <input type="number" class="form-control" id="weekNumberInput" min="1" max="52">
+                </div>
+                <div class="mb-3">
+                  <label for="reportYearInput" class="form-label">Năm</label>
+                  <input type="number" class="form-control" id="reportYearInput" min="2000">
+                </div>
+                <div class="mb-3">
+                  <label for="tasksCompletedInput" class="form-label">Công việc hoàn thành</label>
+                  <textarea class="form-control" id="tasksCompletedInput" rows="4"></textarea>
+                </div>
+                <div class="mb-3">
+                  <label for="nextWeekPlanInput" class="form-label">Kế hoạch tuần tới</label>
+                  <textarea class="form-control" id="nextWeekPlanInput" rows="4"></textarea>
+                </div>
+                <div class="mb-3">
+                  <label for="reportHoursWorkedInput" class="form-label">Số giờ làm việc</label>
+                  <input type="number" class="form-control" id="reportHoursWorkedInput" min="0" step="0.5">
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+              <button type="button" class="btn btn-primary" id="saveReportBtn">Gửi</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal fade" id="dailyReportModal" tabindex="-1" aria-labelledby="dailyReportModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="dailyReportModalLabel">Gửi Báo cáo ngày</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form id="dailyReportForm">
+                <div class="mb-3">
+                  <label for="dailyReportProjectSelect" class="form-label">Dự án</label>
+                  <select id="dailyReportProjectSelect" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                  <label for="dailyReportDateInput" class="form-label">Ngày</label>
+                  <input type="date" class="form-control" id="dailyReportDateInput">
+                </div>
+                <div class="mb-3">
+                  <label for="dailyTasksCompletedInput" class="form-label">Công việc hoàn thành</label>
+                  <textarea class="form-control" id="dailyTasksCompletedInput" rows="4"></textarea>
+                </div>
+                <div class="mb-3">
+                  <label for="dailyReportHoursWorkedInput" class="form-label">Số giờ làm việc</label>
+                  <input type="number" class="form-control" id="dailyReportHoursWorkedInput" min="0" step="0.5">
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+              <button type="button" class="btn btn-primary" id="saveDailyReportBtn">Gửi</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="text-center mt-5">
+      <p>© 2025 PMC. Thiết kế dành riêng cho nội bộ.</p>
+    </footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
+```
+
+### Explanation of Changes
+1. **Reports Section Updates**:
+   - Added a "Gửi báo cáo ngày" button (`createDailyReportBtn`) alongside the existing weekly report button.
+   - Updated the reports table to include new columns: `Dự án`, `Công việc hoàn thành`, `Kế hoạch tuần tới`, and `Số giờ`.
+   - Added an `analysisButtons` div with buttons for `employeeSummaryBtn` and `projectSummaryBtn`, visible only to admins (controlled by JavaScript).
+
+2. **Daily Report Modal**:
+   - Added a new modal (`dailyReportModal`) with fields for:
+     - Project selection (`dailyReportProjectSelect`)
+     - Date (`dailyReportDateInput`)
+     - Tasks completed (`dailyTasksCompletedInput`)
+     - Hours worked (`dailyReportHoursWorkedInput`)
+   - The modal has a similar structure to the weekly report modal but is tailored for daily reporting.
+
+3. **Tasks Table Update**:
+   - Added a `Số giờ` column to display `hours_worked` for tasks, aligning with the new performance analysis feature.
+
+4. **Maintained Existing Structure**:
+   - Kept the existing Bootstrap-based layout, navigation, and other sections (dashboard, projects, tasks) intact.
+   - Ensured all IDs and classes match the JavaScript code for event listeners and DOM manipulation.
+
+### Notes
+- **Styling**: The existing `styles.css` should work with these changes, as the new elements follow the same Bootstrap classes. Additional styling can be added for the new buttons or table columns if needed.
+- **Database Schema**: Ensure the Supabase database includes the `daily_reports` table with fields `{ user_id, project_id, report_date, tasks_completed, hours_worked }` and appropriate Row-Level Security (RLS) policies.
+- **JavaScript Integration**: The IDs used in the HTML (`createDailyReportBtn`, `saveDailyReportBtn`, `employeeSummaryBtn`, `projectSummaryBtn`, etc.) match the event listeners added in the updated `script.js`.
+- **Future Enhancements**: For a more robust UI, consider adding a dedicated analysis section with interactive charts (e.g., using Chart.js) to visualize employee/project summaries. I can provide a chart implementation if requested.
+
+If you need updates to `styles.css` or additional features (e.g., chart visualizations for analysis), let me know!
