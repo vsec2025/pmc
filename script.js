@@ -12,11 +12,11 @@
 // include any service role keys in client-side code. The anon key is safe to
 // expose in a public client because row-level security policies will protect
 // your data.
+
 const SUPABASE_URL = 'https://hziwyxbwqcdittvlhijo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6aXd5eGJ3cWNkaXR0dmxoaWpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4ODE0MTksImV4cCI6MjA2OTQ1NzQxOX0.7kFGMEOX23Lg3b4imPalbju8G4yHyReuWBVoXVmvxEA';
 
-// Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Global state
 let currentUser = null;
