@@ -17,7 +17,12 @@ const SUPABASE_URL = 'https://hziwyxbwqcdittvlhijo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6aXd5eGJ3cWNkaXR0dmxoaWpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4ODE0MTksImV4cCI6MjA2OTQ1NzQxOX0.7kFGMEOX23Lg3b4imPalbju8G4yHyReuWBVoXVmvxEA';
 
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+document.getElementById('btnLogin').addEventListener('click', async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+  });
+  if (error) alert('Lỗi đăng nhập: ' + error.message);
+});
 // Global state
 let currentUser = null;
 let currentUserRole = null;
