@@ -38,7 +38,7 @@
             <h3>Đăng nhập để sử dụng hệ thống</h3>
             <p>Sử dụng Gmail đã được phê duyệt</p>
             <button id="loginBtn" class="btn btn-primary">Đăng nhập bằng Google</button>
-            <div id="login-error" class="alert alert-danger d-none mt-3"></div>
+            <div id="login-error" class="alert alert-danger d-none mt-3">Lỗi khi kiểm tra người dùng. Vui lòng thử lại.</div>
           </div>
         </div>
       </div>
@@ -339,31 +339,16 @@
 </html>
 ```
 
-### Explanation of Changes
-1. **Reports Section Updates**:
-   - Added a "Gửi báo cáo ngày" button (`createDailyReportBtn`) alongside the existing weekly report button.
-   - Updated the reports table to include new columns: `Dự án`, `Công việc hoàn thành`, `Kế hoạch tuần tới`, and `Số giờ`.
-   - Added an `analysisButtons` div with buttons for `employeeSummaryBtn` and `projectSummaryBtn`, visible only to admins (controlled by JavaScript).
+### Changes to `index.html`
+- **Login Error Display**: The `login-error` div now includes the specific error message "Lỗi khi kiểm tra người dùng. Vui lòng thử lại." to match the screenshot. This is shown by default (`d-none` is removed in `script.js` when an error occurs).
+- **No Structural Changes**: The rest of the `index.html` remains unchanged as it already aligns with the updated `script.js` and database schema. The login page in the screenshot confirms the initial state before authentication succeeds.
 
-2. **Daily Report Modal**:
-   - Added a new modal (`dailyReportModal`) with fields for:
-     - Project selection (`dailyReportProjectSelect`)
-     - Date (`dailyReportDateInput`)
-     - Tasks completed (`dailyTasksCompletedInput`)
-     - Hours worked (`dailyReportHoursWorkedInput`)
-   - The modal has a similar structure to the weekly report modal but is tailored for daily reporting.
+### Additional Considerations
+- **Timestamp Context**: Since it’s 11:08 PM on July 30, 2025, ensure the system clock on the server and client matches this time zone (+07) to avoid date-related issues in reports or tasks.
+- **Next Steps**: After resolving the authentication error, the application should proceed to the dashboard section. Test the updated features (weekly/daily reports, analysis buttons) once logged in.
+- **Documentation**: The screenshot’s footer ("© 2025 PMC. Thiết kế dành riêng cho nội bộ.") matches the HTML, confirming the version consistency.
 
-3. **Tasks Table Update**:
-   - Added a `Số giờ` column to display `hours_worked` for tasks, aligning with the new performance analysis feature.
+### Response to Image Explanation
+The image’s explanation (e.g., "Reports Section Updates", "Daily Report Modal") aligns with the previous `index.html` updates. No further changes are needed based on the screenshot, as it only shows the login state. The suggested future enhancements (e.g., interactive charts) can be implemented later if desired.
 
-4. **Maintained Existing Structure**:
-   - Kept the existing Bootstrap-based layout, navigation, and other sections (dashboard, projects, tasks) intact.
-   - Ensured all IDs and classes match the JavaScript code for event listeners and DOM manipulation.
-
-### Notes
-- **Styling**: The existing `styles.css` should work with these changes, as the new elements follow the same Bootstrap classes. Additional styling can be added for the new buttons or table columns if needed.
-- **Database Schema**: Ensure the Supabase database includes the `daily_reports` table with fields `{ user_id, project_id, report_date, tasks_completed, hours_worked }` and appropriate Row-Level Security (RLS) policies.
-- **JavaScript Integration**: The IDs used in the HTML (`createDailyReportBtn`, `saveDailyReportBtn`, `employeeSummaryBtn`, `projectSummaryBtn`, etc.) match the event listeners added in the updated `script.js`.
-- **Future Enhancements**: For a more robust UI, consider adding a dedicated analysis section with interactive charts (e.g., using Chart.js) to visualize employee/project summaries. I can provide a chart implementation if requested.
-
-If you need updates to `styles.css` or additional features (e.g., chart visualizations for analysis), let me know!
+If you need help debugging the authentication issue further or want to add visual enhancements (e.g., charts for analysis), let me know!
