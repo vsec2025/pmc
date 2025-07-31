@@ -1,5 +1,4 @@
-
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -100,9 +99,13 @@
 
   <script>
     // Replace the following values with your Supabase project credentials
+   
    const DATA_URL         = 'https://hziwyxbwqcdittvlhijo.supabase.co';
     const DATA_ANON_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6aXd5eGJ3cWNkaXR0dmxoaWpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4ODE0MTksImV4cCI6MjA2OTQ1NzQxOX0.7kFGMEOX23Lg3b4imPalbju8G4yHyReuWBVoXVmvxEA';
 
+ 
+
+   
     // Initialise Supabase client
     const supabase = supabase.createClient(supabaseUrl, supabaseAnonKey);
 
@@ -121,7 +124,13 @@
      * Log in via Google OAuth using Supabase Auth
      */
     async function loginWithGoogle() {
-      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+      // Redirect back to this page after sign‑in to preserve context
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.href
+        }
+      });
       if (error) {
         alert('Lỗi đăng nhập: ' + error.message);
       }
@@ -305,9 +314,11 @@
       document.getElementById('my-reports').innerHTML = html;
     }
 
-    // Listen for auth changes to handle redirect after login
+    // Listen for auth changes to handle redirect after login. When the user
+    // completes OAuth flow, Supabase will automatically persist the session
+    // and emit a SIGNED_IN event. We then load the user data.
     supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
+      if (event === 'SIGNED_IN' && session && session.user) {
         loadUserAndData(session.user);
       } else if (event === 'SIGNED_OUT') {
         document.getElementById('app').classList.add('hidden');
