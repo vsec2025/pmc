@@ -332,11 +332,26 @@
 
     // Authentication functions
     async function initAuth() {
+      // Check if there's a hash fragment with auth data
+      if (window.location.hash) {
+        console.log('Hash detected, processing auth...');
+        // Let Supabase handle the hash fragment
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
       const { data: { session } } = await supabaseClient.auth.getSession();
+      console.log('Current session:', session);
+      
       if (session) {
         currentUser = session.user;
+        console.log('User authenticated:', currentUser);
         showMainApp();
+        // Clear the hash from URL for cleaner appearance
+        if (window.location.hash) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
       } else {
+        console.log('No session found, showing auth screen');
         showAuthScreen();
       }
     }
@@ -858,20 +873,34 @@
       }
     }
 
-    // Auth state listener
-    supabaseClient.auth.onAuthStateChange((event, session) => {
+    // Auth state listener - moved before initAuth
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session);
+      
       if (event === 'SIGNED_IN' && session) {
         currentUser = session.user;
+        console.log('User signed in:', currentUser);
         showMainApp();
+        // Clear URL hash after successful auth
+        if (window.location.hash) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
       } else if (event === 'SIGNED_OUT') {
         currentUser = null;
+        console.log('User signed out');
         showAuthScreen();
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed');
+        if (session) {
+          currentUser = session.user;
+        }
       }
     });
 
-    // Initialize app
-    document.addEventListener('DOMContentLoaded', () => {
-      initAuth();
+    // Initialize app - moved to end and simplified
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('DOM loaded, initializing auth...');
+      await initAuth();
     });
   </script>
 </body>
