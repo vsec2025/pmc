@@ -1,354 +1,832 @@
-```html
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PMC - Project Management Console</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="styles.css" rel="stylesheet">
+  <!-- =========================================================
+       CRM Bootstrap Full – Single HTML (Modified per request 2025-07-28)
+       Changes:
+       - Disable Services module (hidden UI, no render calls).
+       - Role-based access: admin/BOM = full; user = Dashboard, Customers (limited view), Quotes, Contracts.
+       - Quotes simplified: ID, customer, project, description, amount, status, send_count, pdf_url.
+       - Keep all other parts intact.
+       ========================================================= -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CRM • Supabase • Bootstrap Admin</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <!-- Supabase JS v2 (UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+  <style>
+    html, body { height: 100%; background-color: #f8f9fa; }
+    .sidebar { width: 280px; min-height: 100vh; position: sticky; top: 0; left: 0; border-right: 1px solid #e9ecef; background:#fff; }
+    .sidebar .nav-link { border-radius: .5rem; color: #334155; }
+    .sidebar .nav-link.active, .sidebar .nav-link:hover { background-color: #e7f1ff; color: #0d6efd; }
+    .content-wrap { margin-left: 0; }
+    @media (min-width: 992px) { .content-wrap { margin-left: 280px; } .sidebar { position: fixed; } }
+    .card-shadow { box-shadow: 0 8px 24px rgba(0,0,0,.06); border:1px solid #eef2f7; border-radius:1rem; }
+
+    .suggestions { position:absolute; z-index:1050; background:#fff; border:1px solid #e5e7eb; border-radius:.5rem; max-height:260px; overflow-y:auto; width:100%; box-shadow:0 10px 22px rgba(0,0,0,.08); }
+    .suggestion-item { padding:.5rem .75rem; cursor:pointer; }
+    .suggestion-item:hover { background:#f5f7fb; }
+
+    .section-anchor { scroll-margin-top: 80px; }
+
+    .auth-overlay{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.55); backdrop-filter:blur(2px); z-index:3000;}
+    .auth-card{width:420px; border-radius:1rem; box-shadow:0 20px 40px rgba(0,0,0,.2);}  
+  </style>
 </head>
 <body>
-  <nav id="mainNav" class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#">PMC</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul id="nav-items" class="navbar-nav me-auto mb-2 mb-lg-0" style="display: none;">
-          <li class="nav-item"><a class="nav-link active" href="#dashboard-section" data-section="dashboard-section">Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link" href="#projects-section" data-section="projects-section">Dự án</a></li>
-          <li class="nav-item"><a class="nav-link" href="#tasks-section" data-section="tasks-section">Công việc</a></li>
-          <li class="nav-item"><a class="nav-link" href="#reports-section" data-section="reports-section">Báo cáo</a></li>
-        </ul>
-        <div id="user-info" class="d-flex align-items-center" style="display: none;">
-          <span id="user-name" class="me-3"></span>
-          <button id="signOutBtn" class="btn btn-outline-danger">Đăng xuất</button>
-        </div>
+
+  <!-- ===== AUTH OVERLAY (Google + whitelist user_profiles) ===== -->
+  <div id="authOverlay" class="auth-overlay d-none">
+    <div class="card auth-card">
+      <div class="card-body text-center p-4">
+        <div class="mb-3"><i class="bi bi-shield-lock" style="font-size:2.5rem;"></i></div>
+        <h5 class="fw-bold mb-2">Đăng nhập VSEC CRM</h5>
+        <p class="text-muted small mb-4">Chỉ chấp nhận email nằm trong bảng <code>user_profiles</code> và <code>active = true</code>.</p>
+        <button id="btnGoogle" class="btn btn-dark w-100 mb-2"><i class="bi bi-google me-2"></i>Đăng nhập với Google</button>
+        <div id="authError" class="text-danger small mt-2"></div>
       </div>
     </div>
-  </nav>
+  </div>
 
-  <main class="container mt-5 pt-5">
-    <section id="login-section" class="row">
-      <div class="col-md-6 offset-md-3">
-        <div class="card">
-          <div class="card-body text-center">
-            <h3>Đăng nhập để sử dụng hệ thống</h3>
-            <p>Sử dụng Gmail đã được phê duyệt</p>
-            <button id="loginBtn" class="btn btn-primary">Đăng nhập bằng Google</button>
-            <div id="login-error" class="alert alert-danger d-none mt-3">Lỗi khi kiểm tra người dùng. Vui lòng thử lại.</div>
-          </div>
-        </div>
-      </div>
-    </section>
+  <!-- ========================= SIDEBAR ========================= -->
+  <aside class="sidebar p-3">
+    <a class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+      <span class="fs-5 fw-bold"><i class="bi bi-layout-text-sidebar-reverse me-2"></i>CRM Admin</span>
+    </a>
+    <hr>
+    <ul class="nav nav-pills flex-column gap-1" id="sidebarNav">
+      <li class="nav-item"><a class="nav-link active" data-page="dashboard"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="customers"><i class="bi bi-people me-2"></i>Customers</a></li>
+      <!-- Services DISABLED -->
+      <li class="nav-item" id="navServices" style="display:none"><a class="nav-link" data-page="services"><i class="bi bi-box-seam me-2"></i>Services</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="projects"><i class="bi bi-kanban me-2"></i>Projects</a></li>
+      <!-- Removed Opportunities/Quotes/Contracts nav items per request -->
+      <!-- Added Weekly Report and Summary navigation -->
+      <li class="nav-item"><a class="nav-link" data-page="weekly-report"><i class="bi bi-calendar-week me-2"></i>Weekly Report</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="summary"><i class="bi bi-list-check me-2"></i>Work Summary</a></li>
+      <li class="nav-item"><a class="nav-link" data-page="users" id="navUsers"><i class="bi bi-person-gear me-2"></i>Users</a></li>
+    </ul>
+    <hr>
+    <div class="dropdown">
+      <a class="d-flex align-items-center text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+        <img src="https://ui-avatars.com/api/?name=CRM&background=0D6EFD&color=fff" alt="" width="32" height="32" class="rounded-circle me-2">
+        <strong id="currentEmail">guest@local</strong>
+      </a>
+      <ul class="dropdown-menu shadow">
+        <li><a class="dropdown-item" href="#" id="btnSignOut"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
+      </ul>
+    </div>
+  </aside>
 
-    <section id="dashboard-section" style="display: none;">
-      <h2>Tổng quan</h2>
-      <div id="dashboard-cards" class="row mb-4"></div>
-      <h4>Công việc hôm nay</h4>
-      <div id="dashboard-today-tasks" class="row"></div>
-    </section>
+  <!-- ========================= MAIN ========================= -->
+  <main class="content-wrap">
+    <div class="container-fluid py-4">
 
-    <section id="projects-section" style="display: none;">
-      <h2>Quản lý dự án</h2>
-      <div class="row mb-3">
-        <div class="col-md-4">
-          <label for="projectFilter">Lọc theo trạng thái:</label>
-          <select id="projectFilter" class="form-select">
-            <option value="all">Tất cả</option>
-            <option value="dang thuc hien">Đang thực hiện</option>
-            <option value="da hoan thanh">Đã hoàn thành</option>
-            <option value="tam dung">Tạm dừng</option>
-          </select>
+      <!-- DASHBOARD -->
+      <section id="page-dashboard" class="section-anchor">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
         </div>
-      </div>
-      <button id="createProjectBtn" class="btn btn-primary mb-3">Tạo dự án mới</button>
-      <div class="table-responsive">
-        <table id="projectsTable" class="table table-striped">
-          <thead>
-            <tr>
-              <th>Mã dự án</th>
-              <th>Tên dự án</th>
-              <th>Khách hàng</th>
-              <th>Ngày bắt đầu</th>
-              <th>Ngày kết thúc</th>
-              <th>Trạng thái</th>
-              <th>Tiến độ (%)</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="modal fade" id="projectModal" tabindex="-1" aria-labelledby="projectModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="projectModalLabel">Tạo Dự án</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <form id="projectForm">
-                <input type="hidden" id="projectIdInput">
-                <div class="mb-3">
-                  <label for="projectNameInput" class="form-label">Tên dự án</label>
-                  <input type="text" class="form-control" id="projectNameInput">
-                </div>
-                <div class="mb-3">
-                  <label for="clientNameInput" class="form-label">Khách hàng</label>
-                  <input type="text" class="form-control" id="clientNameInput">
-                </div>
-                <div class="mb-3">
-                  <label for="startDateInput" class="form-label">Ngày bắt đầu</label>
-                  <input type="date" class="form-control" id="startDateInput">
-                </div>
-                <div class="mb-3">
-                  <label for="endDateInput" class="form-label">Ngày kết thúc</label>
-                  <input type="date" class="form-control" id="endDateInput">
-                </div>
-                <div class="mb-3">
-                  <label for="projectStatusInput" class="form-label">Trạng thái</label>
-                  <select id="projectStatusInput" class="form-select">
-                    <option value="dang thuc hien">Đang thực hiện</option>
-                    <option value="da hoan thanh">Đã hoàn thành</option>
-                    <option value="tam dung">Tạm dừng</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label for="projectProgressInput" class="form-label">Tiến độ (%)</label>
-                  <input type="number" class="form-control" id="projectProgressInput" min="0" max="100">
-                </div>
-              </form>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-              <button type="button" class="btn btn-primary" id="saveProjectBtn">Lưu</button>
-            </div>
-          </div>
+        <div class="row g-4">
+          <div class="col-12 col-sm-6 col-lg-3"><div class="card card-shadow"><div class="card-body"><h6 class="text-secondary text-uppercase mb-1">Customers</h6><h2 class="fw-bold mb-0" id="kpiCustomers">0</h2></div></div></div>
+          <div class="col-12 col-sm-6 col-lg-3" id="kpiServicesWrap" style="display:none"><div class="card card-shadow"><div class="card-body"><h6 class="text-secondary text-uppercase mb-1">Services</h6><h2 class="fw-bold mb-0" id="kpiServices">0</h2></div></div></div>
+          <div class="col-12 col-sm-6 col-lg-3"><div class="card card-shadow"><div class="card-body"><h6 class="text-secondary text-uppercase mb-1">Projects</h6><h2 class="fw-bold mb-0" id="kpiProjects">0</h2></div></div></div>
+          <!-- Replaced Opportunities KPI with Weekly Report KPI -->
+          <div class="col-12 col-sm-6 col-lg-3"><div class="card card-shadow"><div class="card-body"><h6 class="text-secondary text-uppercase mb-1">Weekly Reports</h6><h2 class="fw-bold mb-0" id="kpiReports">0</h2></div></div></div>
         </div>
-      </div>
-    </section>
+        <!-- Removed Tổng giá trị cơ hội card -->
+      </section>
 
-    <section id="tasks-section" style="display: none;">
-      <h2>Quản lý công việc</h2>
-      <div class="row mb-3">
-        <div class="col-md-4">
-          <label for="taskFilter">Lọc theo trạng thái:</label>
-          <select id="taskFilter" class="form-select">
-            <option value="all">Tất cả</option>
-            <option value="chua lam">Chưa làm</option>
-            <option value="dang lam">Đang làm</option>
-            <option value="hoan thanh">Hoàn thành</option>
-          </select>
+      <!-- CUSTOMERS -->
+      <section id="page-customers" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-people me-2"></i>Customers</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddCustomer"><i class="bi bi-plus-lg me-1"></i>Thêm khách hàng</button></div>
         </div>
-      </div>
-      <button id="createTaskBtn" class="btn btn-primary mb-3">Tạo công việc mới</button>
-      <div class="table-responsive">
-        <table id="tasksTable" class="table table-striped">
-          <thead>
-            <tr>
-              <th>Mã CV</th>
-              <th>Dự án</th>
-              <th>Tên công việc</th>
-              <th>Người thực hiện</th>
-              <th>Deadline</th>
-              <th>Trạng thái</th>
-              <th>Tiến độ (%)</th>
-              <th>Số giờ</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="taskModalLabel">Tạo Công việc</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <form id="taskForm">
-                <input type="hidden" id="taskIdInput">
-                <div class="mb-3">
-                  <label for="taskProjectSelect" class="form-label">Dự án</label>
-                  <select id="taskProjectSelect" class="form-select"></select>
-                </div>
-                <div class="mb-3">
-                  <label for="taskNameInput" class="form-label">Tên công việc</label>
-                  <input type="text" class="form-control" id="taskNameInput">
-                </div>
-                <div class="mb-3">
-                  <label for="taskAssigneeSelect" class="form-label">Người thực hiện</label>
-                  <select id="taskAssigneeSelect" class="form-select"></select>
-                </div>
-                <div class="mb-3">
-                  <label for="taskDueDateInput" class="form-label">Deadline</label>
-                  <input type="date" class="form-control" id="taskDueDateInput">
-                </div>
-                <div class="mb-3">
-                  <label for="taskStatusInput" class="form-label">Trạng thái</label>
-                  <select id="taskStatusInput" class="form-select">
-                    <option value="chua lam">Chưa làm</option>
-                    <option value="dang lam">Đang làm</option>
-                    <option value="hoan thanh">Hoàn thành</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label for="taskProgressInput" class="form-label">Tiến độ (%)</label>
-                  <input type="number" class="form-control" id="taskProgressInput" min="0" max="100">
-                </div>
-                <div class="mb-3">
-                  <label for="taskHoursWorkedInput" class="form-label">Số giờ làm việc</label>
-                  <input type="number" class="form-control" id="taskHoursWorkedInput" min="0" step="0.5">
-                </div>
-                <div class="mb-3">
-                  <label for="taskNoteInput" class="form-label">Ghi chú</label>
-                  <textarea class="form-control" id="taskNoteInput" rows="4"></textarea>
-                </div>
-              </form>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-              <button type="button" class="btn btn-primary" id="saveTaskBtn">Lưu</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+        <div id="customerFormWrap" class="d-none"></div>
+        <div class="card card-shadow"><div class="card-body table-responsive">
+          <table class="table table-hover table-sm align-middle">
+            <thead class="table-light"><tr><th>ID</th><th>Name</th><th>Contact</th><th>Phone</th><th>Email</th><th>Tax</th><th style="width:120px;">Actions</th></tr></thead>
+            <tbody id="customerTbody"></tbody>
+          </table>
+        </div></div>
+      </section>
 
-    <section id="reports-section" style="display: none;">
-      <h2>Báo cáo</h2>
-      <div class="mb-3">
-        <button id="createReportBtn" class="btn btn-primary me-2">Gửi báo cáo tuần</button>
-        <button id="createDailyReportBtn" class="btn btn-primary me-2">Gửi báo cáo ngày</button>
-        <div id="exportButtons" class="d-inline-block d-none">
-          <button id="exportCsvBtn" class="btn btn-secondary me-2">Xuất CSV</button>
-          <button id="exportPdfBtn" class="btn btn-secondary">Xuất PDF</button>
-        </div>
-        <div id="analysisButtons" class="d-inline-block d-none">
-          <button id="employeeSummaryBtn" class="btn btn-info me-2">Tổng hợp theo nhân viên</button>
-          <button id="projectSummaryBtn" class="btn btn-info">Tổng hợp theo dự án</button>
-        </div>
-      </div>
-      <div class="table-responsive">
-        <table id="reportsTable" class="table table-striped">
-          <thead>
-            <tr>
-              <th>Người báo cáo</th>
-              <th>Tuần</th>
-              <th>Năm</th>
-              <th>Dự án</th>
-              <th>Công việc hoàn thành</th>
-              <th>Kế hoạch tuần tới</th>
-              <th>Số giờ</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="reportModalLabel">Gửi Báo cáo tuần</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <form id="reportForm">
-                <div class="mb-3">
-                  <label for="reportProjectSelect" class="form-label">Dự án</label>
-                  <select id="reportProjectSelect" class="form-select"></select>
-                </div>
-                <div class="mb-3">
-                  <label for="weekNumberInput" class="form-label">Tuần thứ</label>
-                  <input type="number" class="form-control" id="weekNumberInput" min="1" max="52">
-                </div>
-                <div class="mb-3">
-                  <label for="reportYearInput" class="form-label">Năm</label>
-                  <input type="number" class="form-control" id="reportYearInput" min="2000">
-                </div>
-                <div class="mb-3">
-                  <label for="tasksCompletedInput" class="form-label">Công việc hoàn thành</label>
-                  <textarea class="form-control" id="tasksCompletedInput" rows="4"></textarea>
-                </div>
-                <div class="mb-3">
-                  <label for="nextWeekPlanInput" class="form-label">Kế hoạch tuần tới</label>
-                  <textarea class="form-control" id="nextWeekPlanInput" rows="4"></textarea>
-                </div>
-                <div class="mb-3">
-                  <label for="reportHoursWorkedInput" class="form-label">Số giờ làm việc</label>
-                  <input type="number" class="form-control" id="reportHoursWorkedInput" min="0" step="0.5">
-                </div>
-              </form>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-              <button type="button" class="btn btn-primary" id="saveReportBtn">Gửi</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal fade" id="dailyReportModal" tabindex="-1" aria-labelledby="dailyReportModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="dailyReportModalLabel">Gửi Báo cáo ngày</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <form id="dailyReportForm">
-                <div class="mb-3">
-                  <label for="dailyReportProjectSelect" class="form-label">Dự án</label>
-                  <select id="dailyReportProjectSelect" class="form-select"></select>
-                </div>
-                <div class="mb-3">
-                  <label for="dailyReportDateInput" class="form-label">Ngày</label>
-                  <input type="date" class="form-control" id="dailyReportDateInput">
-                </div>
-                <div class="mb-3">
-                  <label for="dailyTasksCompletedInput" class="form-label">Công việc hoàn thành</label>
-                  <textarea class="form-control" id="dailyTasksCompletedInput" rows="4"></textarea>
-                </div>
-                <div class="mb-3">
-                  <label for="dailyReportHoursWorkedInput" class="form-label">Số giờ làm việc</label>
-                  <input type="number" class="form-control" id="dailyReportHoursWorkedInput" min="0" step="0.5">
-                </div>
-              </form>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-              <button type="button" class="btn btn-primary" id="saveDailyReportBtn">Gửi</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+      <!-- SERVICES (DISABLED UI) -->
+      <section id="page-services" class="section-anchor d-none"></section>
 
-    <footer class="text-center mt-5">
-      <p>© 2025 PMC. Thiết kế dành riêng cho nội bộ.</p>
-    </footer>
+      <!-- PROJECTS -->
+      <section id="page-projects" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-kanban me-2"></i>Projects</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddProject"><i class="bi bi-plus-lg me-1"></i>Thêm dự án</button></div>
+        </div>
+        <div id="projectFormWrap" class="d-none"></div>
+        <div class="card card-shadow"><div class="card-body table-responsive">
+          <table class="table table-hover table-sm align-middle">
+            <thead class="table-light"><tr><th>ID</th><th>Tên dự án</th><th>Khách hàng</th><th>Start</th><th>End</th><th>Status</th><th style="width:120px;">Actions</th></tr></thead>
+            <tbody id="projectTbody"></tbody>
+          </table>
+        </div></div>
+      </section>
+
+      <!-- OPPORTUNITIES -->
+      <section id="page-opportunities" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-bullseye me-2"></i>Opportunities</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddOpportunity"><i class="bi bi-plus-lg me-1"></i>Thêm cơ hội</button></div>
+        </div>
+        <div id="oppFormWrap" class="d-none"></div>
+        <div class="card card-shadow"><div class="card-body table-responsive">
+          <table class="table table-hover table-sm align-middle">
+            <thead class="table-light"><tr><th>ID</th><th>Tên cơ hội</th><th>Khách hàng</th><th>Giá trị</th><th>Stage</th><th style="width:120px;">Actions</th></tr></thead>
+            <tbody id="oppTbody"></tbody>
+          </table>
+        </div></div>
+      </section>
+
+      <!-- QUOTES (SIMPLIFIED) -->
+      <section id="page-quotes" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-receipt me-2"></i>Quotes</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddQuote"><i class="bi bi-plus-lg me-1"></i>Thêm báo giá</button></div>
+        </div>
+        <div id="quoteFormWrap" class="d-none"></div>
+        <div class="card card-shadow"><div class="card-body table-responsive">
+          <table class="table table-hover table-sm align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <th>Khách hàng</th>
+                <th>Dự án</th>
+                <th class="text-start">Nội dung</th>
+                <th>Số tiền</th>
+                <th>Status</th>
+                <th>Lần gửi</th>
+                <th>PDF</th>
+                <th style="width:140px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="quoteTbody"></tbody>
+          </table>
+        </div></div>
+      </section>
+
+      <!-- CONTRACTS -->
+      <section id="page-contracts" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-file-earmark-text me-2"></i>Contracts</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddContract"><i class="bi bi-plus-lg me-1"></i>Thêm hợp đồng</button></div>
+        </div>
+        <div id="contractFormWrap" class="d-none"></div>
+        <div class="card card-shadow"><div class="card-body table-responsive">
+          <table class="table table-hover table-sm align-middle">
+            <thead class="table-light"><tr><th>ID</th><th>Dự án</th><th>Khách hàng</th><th>Giá trị</th><th>Status</th><th style="width:140px;">Actions</th></tr></thead>
+            <tbody id="contractTbody"></tbody>
+          </table>
+        </div></div>
+      </section>
+
+      <!-- USERS -->
+      <section id="page-users" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-person-gear me-2"></i>Users</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddUser"><i class="bi bi-plus-lg me-1"></i>Thêm user</button></div>
+        </div>
+        <div id="userFormWrap" class="d-none"></div>
+        <div class="card card-shadow"><div class="card-body table-responsive">
+          <table class="table table-hover table-sm align-middle">
+            <thead class="table-light"><tr><th>Email</th><th>Role</th><th>Active</th><th style="width:140px;">Actions</th></tr></thead>
+            <tbody id="userTbody"></tbody>
+          </table>
+        </div></div>
+      </section>
+
+      <!-- WEEKLY REPORT -->
+      <section id="page-weekly-report" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-calendar-week me-2"></i>Weekly Reports</h1>
+          <div class="ms-auto"><button class="btn btn-primary" id="btnAddReport"><i class="bi bi-plus-lg me-1"></i>Thêm báo cáo</button></div>
+        </div>
+        <div id="reportFormWrap" class="d-none"></div>
+        <div class="card card-shadow"><div class="card-body table-responsive">
+          <table class="table table-hover table-sm align-middle">
+            <thead class="table-light"><tr><th>ID</th><th>User</th><th>Project</th><th class="text-start">Công việc</th><th>Hours</th><th>Week</th><th>Date</th><th style="width:120px;">Actions</th></tr></thead>
+            <tbody id="reportTbody"></tbody>
+          </table>
+        </div></div>
+      </section>
+
+      <!-- SUMMARY -->
+      <section id="page-summary" class="section-anchor d-none">
+        <div class="d-flex align-items-center mb-4">
+          <h1 class="h3 mb-0"><i class="bi bi-list-check me-2"></i>Work Summary</h1>
+        </div>
+        <div class="card card-shadow"><div class="card-body table-responsive">
+          <table class="table table-hover table-sm align-middle">
+            <thead class="table-light"><tr><th>User</th><th>Project</th><th>Total Hours</th><th>Tasks</th></tr></thead>
+            <tbody id="summaryTbody"></tbody>
+          </table>
+        </div></div>
+      </section>
+
+    </div>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="script.js"></script>
+  <!-- ========================= SCRIPTS ========================= -->
+  <script>
+    /* 0) SUPABASE CONFIG */
+    const SUPABASE_URL = 'https://sdmjdhmkjyadgyfodpsf.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkbWpkaG1ranlhZGd5Zm9kcHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2ODQyNjIsImV4cCI6MjA2OTI2MDI2Mn0.Org3PD8CNmqCxC8ylbNiPA5Guo0w0srXgxyF2s2ZHG0';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    /* 1) STATE */
+    let currentUser = { email: null, role: 'user' };
+    // Initialise arrays; opportunities/quotes/contracts kept for compatibility but unused
+    let customers = [], services = [], projects = [], opportunities = [], quotes = [], contracts = [], reports = [], users = [];
+
+    /* Helpers */
+    const pad = (n,w)=> (n+'').padStart(w,'0');
+    function getWeekNumber(date=new Date()){ const d=new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())); const dayNum=d.getUTCDay()||7; d.setUTCDate(d.getUTCDate()+4-dayNum); const yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil((((d-yearStart)/86400000)+1)/7); }
+    function money(n){ return (n||0).toLocaleString('vi-VN'); }
+
+    function generateCustomerId(){ const used=customers.map(c=>parseInt((c.id||'').slice(1),10)).filter(Number.isFinite); for(let i=1;i<10000;i++) if(!used.includes(i)) return 'C'+pad(i,4); throw new Error('Hết mã khách hàng'); }
+    function generateProjectId(){ const y=new Date().getFullYear().toString().slice(-2); const used=projects.filter(p=>(p.project_id||'').startsWith('P_'+y)).map(p=>parseInt(p.project_id.slice(4),10)).filter(Number.isFinite); for(let i=1;i<1000;i++) if(!used.includes(i)) return 'P_'+y+pad(i,3); throw new Error('Hết mã dự án'); }
+    function generateOpportunityId(){ const used=opportunities.map(o=>parseInt((o.opportunity_id||'').split('_')[1],10)).filter(Number.isFinite); for(let i=1;i<100000;i++) if(!used.includes(i)) return 'Op_'+pad(i,5); throw new Error('Hết mã cơ hội'); }
+    function generateQuoteId(){ const now=new Date(); const y=now.getFullYear().toString().slice(-2); const w=pad(getWeekNumber(now),2); const used=quotes.filter(q=>(q.quotes_id||'').startsWith(`Q_${y}${w}`)).map(q=>parseInt(q.quotes_id.slice(6),10)).filter(Number.isFinite); for(let i=1;i<=99;i++) if(!used.includes(i)) return `Q_${y}${w}${pad(i,2)}`; throw new Error('Hết mã báo giá'); }
+    function generateContractId(){ const now=new Date(); const y=now.getFullYear().toString().slice(-2); const w=pad(getWeekNumber(now),2); const used=contracts.filter(c=>(c.contract_id||'').startsWith(`HD_${y}${w}`)).map(c=>parseInt(c.contract_id.slice(7),10)).filter(Number.isFinite); for(let i=1;i<=99;i++) if(!used.includes(i)) return `HD_${y}${w}${pad(i,2)}`; throw new Error('Hết mã hợp đồng'); }
+
+    // Local storage for restricting Customers visibility for normal users
+    function getMyCustomerIds(){ try{ const map = JSON.parse(localStorage.getItem('myCustomers')||'{}'); return map[currentUser.email] || []; }catch{ return []; } }
+    function pushMyCustomerId(id){ try{ const map = JSON.parse(localStorage.getItem('myCustomers')||'{}'); map[currentUser.email] = map[currentUser.email] || []; if(!map[currentUser.email].includes(id)) map[currentUser.email].push(id); localStorage.setItem('myCustomers', JSON.stringify(map)); }catch{} }
+
+    function showSection(page){ document.querySelectorAll('[id^="page-"]').forEach(el=>el.classList.add('d-none')); document.getElementById(`page-${page}`).classList.remove('d-none'); document.querySelectorAll('.sidebar .nav-link').forEach(a=>{ if(a.dataset.page===page) a.classList.add('active'); else a.classList.remove('active'); }); }
+    function setKPIs(){
+      // Update KPI cards for Customers, Projects and Weekly Reports; hide services
+      document.getElementById('kpiCustomers').textContent = customers.length;
+      const sw = document.getElementById('kpiServicesWrap');
+      if(sw) sw.style.display = 'none';
+      document.getElementById('kpiProjects').textContent = projects.length;
+      const repEl = document.getElementById('kpiReports');
+      if(repEl) repEl.textContent = reports.length;
+    }
+    document.addEventListener('click',(e)=>{ if(!e.target.closest('.suggestions') && !e.target.closest('input')) document.querySelectorAll('.suggestions').forEach(b=>b.classList.add('d-none')); });
+
+    /* 3) LOAD DATA */
+    async function loadAll(){
+      // Load core data. Fetch customers, projects, weekly reports (if table exists), and user profiles.
+      const custRes = await sb.from('customers').select('*').order('id');
+      const projRes = await sb.from('projects').select('*').order('project_id');
+      let repData = [];
+      try {
+        const repRes = await sb.from('weekly_reports').select('*').order('report_id');
+        repData = repRes.data || [];
+      } catch (err) {
+        // If weekly_reports table does not exist, keep empty array
+        repData = [];
+      }
+      const userRes = await sb.from('user_profiles').select('*');
+      customers = custRes.data || [];
+      services = []; // services remain disabled
+      projects = projRes.data || [];
+      reports = repData;
+      opportunities = [];
+      quotes = [];
+      contracts = [];
+      users = userRes.data || [];
+    }
+
+    /* 4) RENDERERS */
+    function renderDashboard(){ setKPIs(); }
+
+    function renderCustomers(){ const tbody=document.getElementById('customerTbody'); let list = customers; const elevated = ['admin','BOM'].includes(currentUser.role); if(!elevated){ const ids=getMyCustomerIds(); list = customers.filter(c=>ids.includes(c.id)); } tbody.innerHTML = list.map(c=>`
+        <tr>
+          <td>${c.id}</td>
+          <td class="text-start">${c.name||''}</td>
+          <td>${c.contact_person||''}</td>
+          <td>${c.phone||''}</td>
+          <td>${c.email||''}</td>
+          <td>${c.tax_code||''}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-secondary me-1" onclick="openCustomerForm('${c.id}')"><i class="bi bi-pencil-square"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomer('${c.id}')"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+      `).join(''); }
+
+    function openCustomerForm(id=''){
+      const wrap=document.getElementById('customerFormWrap'); const isEdit=!!id; const c=isEdit?customers.find(x=>x.id===id):{}; wrap.classList.remove('d-none'); wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });wrap.innerHTML=`
+        <div class="card card-shadow mb-4"><div class="card-body">
+          <h5 class="card-title mb-3">${isEdit?'Sửa':'Thêm'} khách hàng</h5>
+          <div class="row g-3">
+            <div class="col-md-2"><label class="form-label">ID</label><input class="form-control" disabled id="cust_id" value="${isEdit?c.id:generateCustomerId()}"></div>
+            <div class="col-md-10 position-relative">
+  <label class="form-label">Tên khách hàng</label>
+  <input class="form-control" id="cust_name"
+         value="${c?.name||''}"
+         autocomplete="off"
+         oninput="suggestExistingCustomer(this.value)"
+  >
+  <div id="cust_name_sugs" class="suggestions d-none"></div>
+</div>
+            <div class="col-md-4"><label class="form-label">Người liên hệ</label><input class="form-control" id="cust_contact" value="${c?.contact_person||''}"></div>
+            <div class="col-md-4"><label class="form-label">Phone</label><input class="form-control" id="cust_phone" value="${c?.phone||''}"></div>
+            <div class="col-md-4"><label class="form-label">Email</label><input class="form-control" id="cust_email" value="${c?.email||''}"></div>
+            <div class="col-md-8"><label class="form-label">Địa chỉ</label><input class="form-control" id="cust_address" value="${c?.address||''}"></div>
+            <div class="col-md-4"><label class="form-label">Mã số thuế</label><input class="form-control" id="cust_tax" value="${c?.tax_code||''}"></div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-primary" onclick="${isEdit?`updateCustomer('${id}')`:'addCustomer()'}"><i class="bi bi-check2-circle me-1"></i>Lưu</button>
+            <button class="btn btn-outline-secondary" onclick="document.getElementById('customerFormWrap').classList.add('d-none')">Hủy</button>
+          </div>
+        </div></div>`; }
+
+    async function addCustomer(){ const payload={ id:document.getElementById('cust_id').value, name:document.getElementById('cust_name').value.trim(), contact_person:document.getElementById('cust_contact').value||null, phone:document.getElementById('cust_phone').value||null, email:document.getElementById('cust_email').value||null, address:document.getElementById('cust_address').value||null, tax_code:document.getElementById('cust_tax').value||null, created_at:new Date().toISOString() }; if(!payload.name) return alert('Tên khách hàng không được trống'); const {error}=await sb.from('customers').insert([payload]); if(error) return alert(error.message); // remember for this user
+      pushMyCustomerId(payload.id);
+      await loadAll(); renderCustomers(); renderDashboard(); document.getElementById('customerFormWrap').classList.add('d-none'); }
+
+    async function updateCustomer(id){ const payload={ name:document.getElementById('cust_name').value.trim(), contact_person:document.getElementById('cust_contact').value||null, phone:document.getElementById('cust_phone').value||null, email:document.getElementById('cust_email').value||null, address:document.getElementById('cust_address').value||null, tax_code:document.getElementById('cust_tax').value||null }; if(!payload.name) return alert('Tên khách hàng không được trống'); const {error}=await sb.from('customers').update(payload).eq('id',id); if(error) return alert(error.message); await loadAll(); renderCustomers(); renderDashboard(); document.getElementById('customerFormWrap').classList.add('d-none'); }
+
+    async function deleteCustomer(id){ if(!confirm('Xóa khách hàng?')) return; const {error}=await sb.from('customers').delete().eq('id',id); if(error) return alert(error.message); await loadAll(); renderCustomers(); renderDashboard(); }
+
+    /* SERVICES DISABLED: no renderer */
+
+    /* PROJECTS */
+    function renderProjects(){ const tbody=document.getElementById('projectTbody'); tbody.innerHTML = projects.map(p=>{ const c=customers.find(x=>x.id===p.customer_id); return `
+          <tr>
+            <td>${p.project_id}</td>
+            <td class="text-start">${p.project_name||''}</td>
+            <td class="text-start">${c?c.name:p.customer_id}</td>
+            <td>${p.start_date||''}</td>
+            <td>${p.end_date||''}</td>
+            <td>${p.status||''}</td>
+            <td>
+              <button class="btn btn-sm btn-outline-secondary me-1" onclick="openProjectForm('${p.project_id}')"><i class="bi bi-pencil-square"></i></button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteProject('${p.project_id}')"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>`; }).join(''); }
+
+    function openProjectForm(id=''){ const wrap=document.getElementById('projectFormWrap'); const isEdit=!!id; const p=isEdit?projects.find(x=>x.project_id===id):{}; const cust=customers.find(c=>c.id===p?.customer_id); wrap.classList.remove('d-none'); window.scrollTo({ top: 0, behavior: 'smooth' });wrap.innerHTML=`
+        <div class="card card-shadow mb-4"><div class="card-body">
+          <h5 class="card-title mb-3">${isEdit?'Sửa':'Thêm'} dự án</h5>
+          <div class="row g-3">
+            <div class="col-md-3"><label class="form-label">ID</label><input class="form-control" disabled id="pr_id" value="${isEdit?p.project_id:generateProjectId()}"></div>
+            <div class="col-md-9"><label class="form-label">Tên dự án</label><input class="form-control" id="pr_name" value="${p?.project_name||''}"></div>
+            <div class="col-md-6 position-relative"><label class="form-label">Khách hàng</label><input class="form-control" id="pr_client" autocomplete="off" value="${cust?.name||''}" oninput="suggestCustomer(this.value,'pr_client')"><div id="pr_client_sugs" class="suggestions d-none"></div><input type="hidden" id="pr_client_id" value="${p?.customer_id||''}"></div>
+            <div class="col-md-3"><label class="form-label">Start</label><input type="date" class="form-control" id="pr_start" value="${p?.start_date||''}"></div>
+            <div class="col-md-3"><label class="form-label">End</label><input type="date" class="form-control" id="pr_end" value="${p?.end_date||''}"></div>
+            <div class="col-md-12"><label class="form-label">Status</label><select class="form-select" id="pr_status"><option${p?.status==='Chuẩn bị'?' selected':''}>Chuẩn bị</option><option${p?.status==='Đang triển khai'?' selected':''}>Đang triển khai</option><option${p?.status==='Hoàn thành'?' selected':''}>Hoàn thành</option></select></div>
+            <div class="col-12"><label class="form-label">Mô tả</label><textarea class="form-control" rows="2" id="pr_desc">${p?.description||''}</textarea></div>
+          </div>
+          <div class="mt-3 d-flex gap-2"><button class="btn btn-primary" onclick="${isEdit?`updateProject('${id}')`:'addProject()'}"><i class="bi bi-check2-circle me-1"></i>Lưu</button><button class="btn btn-outline-secondary" onclick="document.getElementById('projectFormWrap').classList.add('d-none')">Hủy</button></div>
+        </div></div>`; }
+
+    async function addProject(){ const payload={ project_id:document.getElementById('pr_id').value, project_name:document.getElementById('pr_name').value.trim(), customer_id:document.getElementById('pr_client_id').value, description:document.getElementById('pr_desc').value||null, start_date:document.getElementById('pr_start').value||null, end_date:document.getElementById('pr_end').value||null, status:document.getElementById('pr_status').value, created_at:new Date().toISOString() }; if(!payload.project_name) return alert('Tên dự án không được trống'); if(!payload.customer_id) return alert('Chưa chọn khách hàng hợp lệ'); const {error}=await sb.from('projects').insert([payload]); if(error) return alert(error.message); await loadAll(); renderProjects(); renderDashboard(); document.getElementById('projectFormWrap').classList.add('d-none'); }
+
+    async function updateProject(id){ const payload={ project_name:document.getElementById('pr_name').value.trim(), customer_id:document.getElementById('pr_client_id').value, description:document.getElementById('pr_desc').value||null, start_date:document.getElementById('pr_start').value||null, end_date:document.getElementById('pr_end').value||null, status:document.getElementById('pr_status').value }; if(!payload.project_name) return alert('Tên dự án không được trống'); if(!payload.customer_id) return alert('Chưa chọn khách hàng hợp lệ'); const {error}=await sb.from('projects').update(payload).eq('project_id',id); if(error) return alert(error.message); await loadAll(); renderProjects(); renderDashboard(); document.getElementById('projectFormWrap').classList.add('d-none'); }
+
+    async function deleteProject(id){ if(!confirm('Xóa dự án?')) return; const {error}=await sb.from('projects').delete().eq('project_id',id); if(error) return alert(error.message); await loadAll(); renderProjects(); renderDashboard(); }
+
+    /* OPPORTUNITIES */
+    function renderOpportunities(){ const tbody=document.getElementById('oppTbody'); tbody.innerHTML = opportunities.map(o=>{ const c=customers.find(x=>x.id===o.customer_id); return `
+          <tr>
+            <td>${o.opportunity_id}</td>
+            <td class="text-start">${o.name||''}</td>
+            <td class="text-start">${c?c.name:o.customer_id}</td>
+            <td>${money(o.expected_value)}</td>
+            <td>${o.stage||''}</td>
+            <td>
+              <button class="btn btn-sm btn-outline-secondary me-1" onclick="openOppForm('${o.opportunity_id}')"><i class="bi bi-pencil-square"></i></button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteOpportunity('${o.opportunity_id}')"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>`; }).join(''); }
+
+    function openOppForm(id=''){ const wrap=document.getElementById('oppFormWrap'); const isEdit=!!id; const o=isEdit?opportunities.find(x=>x.opportunity_id===id):{}; const cust=customers.find(c=>c.id===o?.customer_id); wrap.classList.remove('d-none'); window.scrollTo({ top: 0, behavior: 'smooth' });wrap.innerHTML=`
+        <div class="card card-shadow mb-4"><div class="card-body">
+          <h5 class="card-title mb-3">${isEdit?'Sửa':'Thêm'} cơ hội</h5>
+          <div class="row g-3">
+            <div class="col-md-3"><label class="form-label">ID</label><input class="form-control" disabled id="op_id" value="${isEdit?o.opportunity_id:generateOpportunityId()}"></div>
+            <div class="col-md-9"><label class="form-label">Tên cơ hội</label><input class="form-control" id="op_name" value="${o?.name||''}"></div>
+            <div class="col-md-6 position-relative"><label class="form-label">Khách hàng</label><input class="form-control" id="op_client" autocomplete="off" value="${cust?.name||''}" oninput="suggestCustomer(this.value,'op_client')"><div id="op_client_sugs" class="suggestions d-none"></div><input type="hidden" id="op_client_id" value="${o?.customer_id||''}"></div>
+            <div class="col-md-6"><label class="form-label">Giá trị kỳ vọng</label><input type="number" class="form-control" id="op_val" value="${o?.expected_value||0}"></div>
+            <div class="col-md-12"><label class="form-label">Stage</label><select class="form-select" id="op_stage"><option${o?.stage==='mới'?' selected':''}>mới</option><option${o?.stage==='đánh giá'?' selected':''}>đánh giá</option><option${o?.stage==='đàm phán'?' selected':''}>đàm phán</option><option${o?.stage==='đã thắng'?' selected':''}>đã thắng</option><option${o?.stage==='đã mất'?' selected':''}>đã mất</option></select></div>
+          </div>
+          <div class="mt-3 d-flex gap-2"><button class="btn btn-primary" onclick="${isEdit?`updateOpportunity('${id}')`:'addOpportunity()'}"><i class="bi bi-check2-circle me-1"></i>Lưu</button><button class="btn btn-outline-secondary" onclick="document.getElementById('oppFormWrap').classList.add('d-none')">Hủy</button></div>
+        </div></div>`; }
+
+    async function addOpportunity(){ const payload={ opportunity_id:document.getElementById('op_id').value, name:document.getElementById('op_name').value.trim(), customer_id:document.getElementById('op_client_id').value, expected_value:parseInt(document.getElementById('op_val').value||'0',10), stage:document.getElementById('op_stage').value, created_at:new Date().toISOString() }; if(!payload.name) return alert('Tên cơ hội không được trống'); if(!payload.customer_id) return alert('Chưa chọn khách hàng hợp lệ'); const {error}=await sb.from('opportunities').insert([payload]); if(error) return alert(error.message); await loadAll(); renderOpportunities(); renderDashboard(); document.getElementById('oppFormWrap').classList.add('d-none'); }
+
+    async function updateOpportunity(id){ const payload={ name:document.getElementById('op_name').value.trim(), customer_id:document.getElementById('op_client_id').value, expected_value:parseInt(document.getElementById('op_val').value||'0',10), stage:document.getElementById('op_stage').value }; if(!payload.name) return alert('Tên cơ hội không được trống'); if(!payload.customer_id) return alert('Chưa chọn khách hàng hợp lệ'); const {error}=await sb.from('opportunities').update(payload).eq('opportunity_id',id); if(error) return alert(error.message); await loadAll(); renderOpportunities(); renderDashboard(); document.getElementById('oppFormWrap').classList.add('d-none'); }
+
+    async function deleteOpportunity(id){ if(!confirm('Xóa cơ hội?')) return; const {error}=await sb.from('opportunities').delete().eq('opportunity_id',id); if(error) return alert(error.message); await loadAll(); renderOpportunities(); renderDashboard(); }
+
+    /* QUOTES (SIMPLIFIED) */
+    function renderQuotes(){ const tbody=document.getElementById('quoteTbody'); tbody.innerHTML = quotes.map(q=>{ const c=customers.find(x=>x.id===q.customer_id); const pr=projects.find(p=>p.project_id===q.project_id); return `
+          <tr>
+            <td>${q.quotes_id}</td>
+            <td class="text-start">${c?c.name:q.customer_id}</td>
+            <td class="text-start">${pr?pr.project_name:(q.project_id||'')}</td>
+            <td class="text-start">${q.description||''}</td>
+            <td>${money(q.amount)}</td>
+            <td>${q.status||''}</td>
+            <td>${q.send_count||0}</td>
+            <td>${q.pdf_url?`<a href="${q.pdf_url}" target="_blank">PDF</a>`:''}</td>
+            <td>
+              <button class="btn btn-sm btn-outline-secondary me-1" onclick="openQuoteForm('${q.quotes_id}')"><i class="bi bi-pencil-square"></i></button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteQuote('${q.quotes_id}')"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>`; }).join(''); }
+
+    function openQuoteForm(id=''){ const wrap=document.getElementById('quoteFormWrap'); const isEdit=!!id; const q=isEdit?quotes.find(x=>x.quotes_id===id):{}; const cust=customers.find(c=>c.id===q?.customer_id); const pr=projects.find(p=>p.project_id===q?.project_id); wrap.classList.remove('d-none'); window.scrollTo({ top: 0, behavior: 'smooth' });wrap.innerHTML=`
+        <div class="card card-shadow mb-4"><div class="card-body">
+          <h5 class="card-title mb-3">${isEdit?'Sửa':'Thêm'} báo giá</h5>
+          <div class="row g-3">
+            <div class="col-md-3"><label class="form-label">ID</label><input class="form-control" disabled id="q_id" value="${isEdit?q.quotes_id:generateQuoteId()}"></div>
+            <div class="col-md-9 position-relative"><label class="form-label">Khách hàng</label><input class="form-control" id="q_client" autocomplete="off" value="${cust?.name||''}" oninput="suggestCustomer(this.value,'q_client')"><div id="q_client_sugs" class="suggestions d-none"></div><input type="hidden" id="q_client_id" value="${q?.customer_id||''}"></div>
+            <div class="col-md-6 position-relative"><label class="form-label">Dự án</label><input class="form-control" id="q_project" oninput="suggestProject(this.value,'q_project')" …>
+<div id="q_project_sugs" class="suggestions d-none"></div><input type="hidden" id="q_project_id" value="${q?.project_id||''}"></div>
+            <div class="col-md-6"><label class="form-label">Số tiền</label><input type="number" class="form-control" id="q_amount" value="${q?.amount||0}"></div>
+            <div class="col-12"><label class="form-label">Nội dung</label><textarea class="form-control" rows="2" id="q_desc">${q?.description||''}</textarea></div>
+            <div class="col-md-6"><label class="form-label">Status</label><select class="form-select" id="q_status"><option${q?.status==='nháp'?' selected':''}>nháp</option><option${q?.status==='đã gửi'?' selected':''}>đã gửi</option><option${q?.status==='chấp nhận'?' selected':''}>chấp nhận</option><option${q?.status==='từ chối'?' selected':''}>từ chối</option></select></div>
+            <div class="col-md-3"><label class="form-label">Lần gửi</label><input type="number" class="form-control" id="q_send" value="${q?.send_count||0}"></div>
+            <div class="col-md-3"><label class="form-label">PDF URL</label><input class="form-control" id="q_pdf" placeholder="https://...pdf" value="${q?.pdf_url||''}"></div>
+          </div>
+          <div class="mt-4 d-flex gap-2"><button class="btn btn-primary" onclick="${isEdit?`updateQuote('${id}')`:'addQuote()'}"><i class="bi bi-check2-circle me-1"></i>Lưu báo giá</button><button class="btn btn-outline-secondary" onclick="document.getElementById('quoteFormWrap').classList.add('d-none')">Hủy</button></div>
+        </div></div>`; }
+
+    async function addQuote(){ const qid=document.getElementById('q_id').value; const payload={ quotes_id:qid, customer_id:document.getElementById('q_client_id').value, project_id:document.getElementById('q_project_id').value || null, description:document.getElementById('q_desc').value || null, amount:parseInt(document.getElementById('q_amount').value||'0',10), status:document.getElementById('q_status').value, send_count: parseInt(document.getElementById('q_send').value||'0',10), pdf_url: document.getElementById('q_pdf').value || null, created_at:new Date().toISOString() }; if(!payload.customer_id) return alert('Chưa chọn khách hàng hợp lệ'); const {error}=await sb.from('quotes').insert([payload]); if(error) return alert(error.message); await loadAll(); renderQuotes(); renderDashboard(); document.getElementById('quoteFormWrap').classList.add('d-none'); }
+
+    async function updateQuote(id){ const payload={ customer_id:document.getElementById('q_client_id').value, project_id:document.getElementById('q_project_id').value || null, description:document.getElementById('q_desc').value || null, amount:parseInt(document.getElementById('q_amount').value||'0',10), status:document.getElementById('q_status').value, send_count: parseInt(document.getElementById('q_send').value||'0',10), pdf_url: document.getElementById('q_pdf').value || null }; if(!payload.customer_id) return alert('Chưa chọn khách hàng hợp lệ'); const {error}=await sb.from('quotes').update(payload).eq('quotes_id',id); if(error) return alert(error.message); await loadAll(); renderQuotes(); renderDashboard(); document.getElementById('quoteFormWrap').classList.add('d-none'); }
+
+    async function deleteQuote(id){ if(!confirm('Xóa báo giá?')) return; const {error}=await sb.from('quotes').delete().eq('quotes_id',id); if(error) return alert(error.message); await loadAll(); renderQuotes(); renderDashboard(); }
+
+    /* CONTRACTS */
+    function renderContracts(){ const tbody=document.getElementById('contractTbody'); tbody.innerHTML = contracts.map(ct=>{ const pr=projects.find(p=>p.project_id===ct.project_id); const c=customers.find(x=>x.id===ct.customer_id); return `
+          <tr>
+            <td>${ct.contract_id}</td>
+            <td class="text-start">${pr?pr.project_name:ct.project_id}</td>
+            <td class="text-start">${c?c.name:ct.customer_id}</td>
+            <td>${money(ct.value)}</td>
+            <td>${ct.status||''}</td>
+            <td>
+              <button class="btn btn-sm btn-outline-secondary me-1" onclick="openContractForm('${ct.contract_id}')"><i class="bi bi-pencil-square"></i></button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteContract('${ct.contract_id}')"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>`; }).join(''); }
+
+    function openContractForm(id=''){ const wrap=document.getElementById('contractFormWrap'); const isEdit=!!id; const ct=isEdit?contracts.find(x=>x.contract_id===id):{}; const pr=projects.find(p=>p.project_id===ct?.project_id); wrap.classList.remove('d-none');window.scrollTo({ top: 0, behavior: 'smooth' }); wrap.innerHTML=`
+        <div class="card card-shadow mb-4"><div class="card-body">
+          <h5 class="card-title mb-3">${isEdit?'Sửa':'Thêm'} hợp đồng</h5>
+          <div class="row g-3">
+            <div class="col-md-3"><label class="form-label">ID</label><input class="form-control" disabled id="ct_id" value="${isEdit?ct.contract_id:generateContractId()}"></div>
+            <div class="col-md-9 position-relative"><label class="form-label">Dự án</label><input class="form-control" id="ct_proj" autocomplete="off" value="${pr?.project_name||''}" oninput="suggestProject(this.value,'ct_proj')"><div id="ct_proj_sugs" class="suggestions d-none"></div><input type="hidden" id="ct_proj_id" value="${ct?.project_id||''}"></div>
+            <div class="col-md-6 position-relative"><label class="form-label">Báo giá (tùy chọn)</label><input class="form-control" id="ct_quote" autocomplete="off" value="${ct?.quotes_id||''}" oninput="suggestQuote(this.value,'ct_quote')"><div id="ct_quote_sugs" class="suggestions d-none"></div><input type="hidden" id="ct_quote_id" value="${ct?.quotes_id||''}"></div>
+            <div class="col-md-6"><label class="form-label">Giá trị</label><input type="number" class="form-control" id="ct_val" value="${ct?.value||0}"></div>
+            <div class="col-md-6"><label class="form-label">Ngày HĐ</label><input type="date" class="form-control" id="ct_date" value="${ct?.contract_date||''}"></div>
+            <div class="col-md-6"><label class="form-label">Trạng thái</label><select class="form-select" id="ct_status"><option${ct?.status==='hiệu lực'?' selected':''}>hiệu lực</option><option${ct?.status==='hoàn thành'?' selected':''}>hoàn thành</option><option${ct?.status==='hủy'?' selected':''}>hủy</option></select></div>
+          </div>
+          <div class="mt-3 d-flex gap-2"><button class="btn btn-primary" onclick="${isEdit?`updateContract('${id}')`:'addContract()'}"><i class="bi bi-check2-circle me-1"></i>Lưu</button><button class="btn btn-outline-secondary" onclick="document.getElementById('contractFormWrap').classList.add('d-none')">Hủy</button></div>
+        </div></div>`; }
+
+    async function addContract(){ const projId=document.getElementById('ct_proj_id').value; const proj=projects.find(p=>p.project_id===projId)||{}; const payload={ contract_id:document.getElementById('ct_id').value, project_id:projId, customer_id:proj.customer_id, quotes_id:document.getElementById('ct_quote_id').value || null, value:parseInt(document.getElementById('ct_val').value||'0',10), contract_date:document.getElementById('ct_date').value || null, status:document.getElementById('ct_status').value, created_at:new Date().toISOString() }; if(!payload.project_id) return alert('Chưa chọn dự án hợp lệ'); const {error}=await sb.from('contracts').insert([payload]); if(error) return alert(error.message); await loadAll(); renderContracts(); renderDashboard(); document.getElementById('contractFormWrap').classList.add('d-none'); }
+
+    async function updateContract(id){ const projId=document.getElementById('ct_proj_id').value; const proj=projects.find(p=>p.project_id===projId)||{}; const payload={ project_id:projId, customer_id:proj.customer_id, quotes_id:document.getElementById('ct_quote_id').value || null, value:parseInt(document.getElementById('ct_val').value||'0',10), contract_date:document.getElementById('ct_date').value || null, status:document.getElementById('ct_status').value }; if(!payload.project_id) return alert('Chưa chọn dự án hợp lệ'); const {error}=await sb.from('contracts').update(payload).eq('contract_id',id); if(error) return alert(error.message); await loadAll(); renderContracts(); renderDashboard(); document.getElementById('contractFormWrap').classList.add('d-none'); }
+
+    async function deleteContract(id){ if(!confirm('Xóa hợp đồng?')) return; const {error}=await sb.from('contracts').delete().eq('contract_id',id); if(error) return alert(error.message); await loadAll(); renderContracts(); renderDashboard(); }
+
+    /* USERS (whitelist) */
+    function renderUsers(){ const me = users.find(u=>u.email===currentUser.email); const canSee = me && ['admin','BOM'].includes(me.role); document.getElementById('navUsers').style.display = canSee ? '' : 'none'; const tbody=document.getElementById('userTbody'); tbody.innerHTML = users.map(u=>`
+        <tr>
+          <td class="text-start">${u.email}</td>
+          <td>${u.role||''}</td>
+          <td>${u.active?'true':'false'}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-secondary me-1" onclick="openUserForm('${u.id}')"><i class="bi bi-pencil-square"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${u.id}')"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>`).join(''); }
+
+    function openUserForm(id=''){ const wrap=document.getElementById('userFormWrap'); const isEdit=!!id; const u=isEdit?users.find(x=>x.id===id):{}; wrap.classList.remove('d-none'); wrap.innerHTML=`
+        <div class="card card-shadow mb-4"><div class="card-body">
+          <h5 class="card-title mb-3">${isEdit?'Sửa':'Thêm'} user</h5>
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" id="us_email" value="${u?.email||''}" ${isEdit?'disabled':''}></div>
+            <div class="col-md-3"><label class="form-label">Role</label><select class="form-select" id="us_role"><option value="user"${u?.role==='user'?' selected':''}>user</option><option value="admin"${u?.role==='admin'?' selected':''}>admin</option><option value="BOM"${u?.role==='BOM'?' selected':''}>BOM</option></select></div>
+            <div class="col-md-3"><label class="form-label">Active</label><select class="form-select" id="us_active"><option value="true"${u?.active?' selected':''}>true</option><option value="false"${!u?.active?' selected':''}>false</option></select></div>
+          </div>
+          <div class="mt-3 d-flex gap-2"><button class="btn btn-primary" onclick="${isEdit?`updateUser('${id}')`:'addUser()'}"><i class="bi bi-check2-circle me-1"></i>Lưu</button><button class="btn btn-outline-secondary" onclick="document.getElementById('userFormWrap').classList.add('d-none')">Hủy</button></div>
+        </div></div>`; }
+
+    async function addUser(){ const payload={ email:document.getElementById('us_email').value.trim(), role:document.getElementById('us_role').value, active:document.getElementById('us_active').value==='true', created_at:new Date().toISOString() }; if(!payload.email) return alert('Email không được trống'); const {error}=await sb.from('user_profiles').insert([payload]); if(error) return alert(error.message); await loadAll(); renderUsers(); document.getElementById('userFormWrap').classList.add('d-none'); }
+    async function updateUser(id){ const payload={ role:document.getElementById('us_role').value, active:document.getElementById('us_active').value==='true' }; const {error}=await sb.from('user_profiles').update(payload).eq('id',id); if(error) return alert(error.message); await loadAll(); renderUsers(); document.getElementById('userFormWrap').classList.add('d-none'); }
+    async function deleteUser(id){ if(!confirm('Xóa user?')) return; const {error}=await sb.from('user_profiles').delete().eq('id',id); if(error) return alert(error.message); await loadAll(); renderUsers(); }
+
+    /* WEEKLY REPORTS */
+    // Generate a unique ID for a new weekly report based on year and week number
+    function generateReportId(){
+      const now = new Date();
+      const y = now.getFullYear().toString().slice(-2);
+      const w = pad(getWeekNumber(now),2);
+      const used = (reports||[]).filter(r => (r.report_id||'').startsWith(`R_${y}${w}`)).map(r => parseInt(r.report_id.slice(5),10)).filter(Number.isFinite);
+      for(let i=1;i<=99;i++){
+        if(!used.includes(i)) return `R_${y}${w}${pad(i,2)}`;
+      }
+      throw new Error('Hết mã báo cáo');
+    }
+
+    function renderReports(){
+      const tbody = document.getElementById('reportTbody');
+      if(!tbody) return;
+      tbody.innerHTML = (reports||[]).map(r=>{
+        const proj = projects.find(p=>p.project_id===r.project_id);
+        return `
+          <tr>
+            <td>${r.report_id||''}</td>
+            <td class="text-start">${r.user_email||''}</td>
+            <td class="text-start">${proj?proj.project_name:(r.project_id||'')}</td>
+            <td class="text-start">${r.task||''}</td>
+            <td>${r.hours||''}</td>
+            <td>${r.week||getWeekNumber(new Date(r.date||''))}</td>
+            <td>${r.date||''}</td>
+            <td>
+              <button class="btn btn-sm btn-outline-secondary me-1" onclick="openReportForm('${r.report_id}')"><i class="bi bi-pencil-square"></i></button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteReport('${r.report_id}')"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderSummary(){
+      const tbody = document.getElementById('summaryTbody');
+      if(!tbody) return;
+      // Aggregate reports by user and project
+      const groups = {};
+      (reports||[]).forEach(r=>{
+        const key = `${r.user_email||''}|${r.project_id||''}`;
+        if(!groups[key]){
+          groups[key] = { user_email: r.user_email||'', project_id: r.project_id||'', hours: 0, count: 0 };
+        }
+        groups[key].hours += parseFloat(r.hours||0);
+        groups[key].count += 1;
+      });
+      const rows = Object.values(groups);
+      tbody.innerHTML = rows.map(g=>{
+        const proj = projects.find(p=>p.project_id===g.project_id);
+        return `
+          <tr>
+            <td class="text-start">${g.user_email}</td>
+            <td class="text-start">${proj?proj.project_name:g.project_id}</td>
+            <td>${g.hours}</td>
+            <td>${g.count}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openReportForm(id=''){
+      const wrap = document.getElementById('reportFormWrap');
+      if(!wrap) return;
+      const isEdit = !!id;
+      const r = isEdit ? (reports||[]).find(x=>x.report_id===id) || {} : {};
+      wrap.classList.remove('d-none');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const userOptions = (users||[]).map(u => `<option value="${u.email}"${r?.user_email===u.email?' selected':''}>${u.email}</option>`).join('');
+      const projectOptions = (projects||[]).map(p => `<option value="${p.project_id}"${r?.project_id===p.project_id?' selected':''}>${p.project_name}</option>`).join('');
+      wrap.innerHTML = `
+        <div class="card card-shadow mb-4"><div class="card-body">
+          <h5 class="card-title mb-3">${isEdit ? 'Sửa' : 'Thêm'} báo cáo tuần</h5>
+          <div class="row g-3">
+            <div class="col-md-3"><label class="form-label">ID</label><input class="form-control" disabled id="rep_id" value="${isEdit ? r.report_id : generateReportId()}"></div>
+            <div class="col-md-4"><label class="form-label">User</label><select class="form-select" id="rep_user"><option value="">--chọn--</option>${userOptions}</select></div>
+            <div class="col-md-5"><label class="form-label">Project</label><select class="form-select" id="rep_project"><option value="">--chọn--</option>${projectOptions}</select></div>
+            <div class="col-md-4"><label class="form-label">Date</label><input type="date" class="form-control" id="rep_date" value="${r?.date||''}"></div>
+            <div class="col-md-2"><label class="form-label">Hours</label><input type="number" class="form-control" id="rep_hours" value="${r?.hours||''}"></div>
+            <div class="col-12"><label class="form-label">Công việc</label><textarea class="form-control" rows="2" id="rep_task">${r?.task||''}</textarea></div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-primary" onclick="${isEdit ? `updateReport('${id}')` : 'addReport()'}"><i class="bi bi-check2-circle me-1"></i>Lưu</button>
+            <button class="btn btn-outline-secondary" onclick="document.getElementById('reportFormWrap').classList.add('d-none')">Hủy</button>
+          </div>
+        </div></div>
+      `;
+    }
+
+    async function addReport(){
+      const id = document.getElementById('rep_id').value;
+      const payload = {
+        report_id: id,
+        user_email: document.getElementById('rep_user').value,
+        project_id: document.getElementById('rep_project').value,
+        task: document.getElementById('rep_task').value.trim(),
+        hours: parseFloat(document.getElementById('rep_hours').value || '0'),
+        date: document.getElementById('rep_date').value || null
+      };
+      if(!payload.user_email) return alert('Chưa chọn user hợp lệ');
+      if(!payload.project_id) return alert('Chưa chọn dự án hợp lệ');
+      if(!payload.date) return alert('Chưa chọn ngày');
+      payload.week = getWeekNumber(new Date(payload.date));
+      const { error } = await sb.from('weekly_reports').insert([payload]);
+      if(error) return alert(error.message);
+      await loadAll();
+      renderReports();
+      renderSummary();
+      renderDashboard();
+      document.getElementById('reportFormWrap').classList.add('d-none');
+    }
+
+    async function updateReport(id){
+      const payload = {
+        user_email: document.getElementById('rep_user').value,
+        project_id: document.getElementById('rep_project').value,
+        task: document.getElementById('rep_task').value.trim(),
+        hours: parseFloat(document.getElementById('rep_hours').value || '0'),
+        date: document.getElementById('rep_date').value || null
+      };
+      if(!payload.user_email) return alert('Chưa chọn user hợp lệ');
+      if(!payload.project_id) return alert('Chưa chọn dự án hợp lệ');
+      if(!payload.date) return alert('Chưa chọn ngày');
+      payload.week = getWeekNumber(new Date(payload.date));
+      const { error } = await sb.from('weekly_reports').update(payload).eq('report_id', id);
+      if(error) return alert(error.message);
+      await loadAll();
+      renderReports();
+      renderSummary();
+      renderDashboard();
+      document.getElementById('reportFormWrap').classList.add('d-none');
+    }
+
+    async function deleteReport(id){
+      if(!confirm('Xóa báo cáo?')) return;
+      const { error } = await sb.from('weekly_reports').delete().eq('report_id', id);
+      if(error) return alert(error.message);
+      await loadAll();
+      renderReports();
+      renderSummary();
+      renderDashboard();
+    }
+
+    /* 12) AUTOCOMPLETE HELPERS */
+    function suggestExistingCustomer(q) {
+  const box = document.getElementById('cust_name_sugs');
+  box.innerHTML = '';
+  if (!q) {
+    box.classList.add('d-none');
+    return;
+  }
+  // Tìm trong mảng customers (đã load từ Supabase)
+  const list = customers.filter(c =>
+    (c.name||'').toLowerCase().includes(q.toLowerCase()) ||
+    (c.id  ||'').toLowerCase().includes(q.toLowerCase())
+  );
+  if (list.length) {
+    list.forEach(c => {
+      const d = document.createElement('div');
+      d.className = 'suggestion-item';
+      d.textContent = `${c.id} – ${c.name}`;
+      d.onclick = () => {
+        // điền form với dữ liệu đã có
+        document.getElementById('cust_id').value          = c.id;
+        document.getElementById('cust_name').value        = c.name;
+        document.getElementById('cust_contact').value     = c.contact_person||'';
+        document.getElementById('cust_phone').value       = c.phone||'';
+        document.getElementById('cust_email').value       = c.email||'';
+        document.getElementById('cust_address').value     = c.address||'';
+        document.getElementById('cust_tax').value         = c.tax_code||'';
+        box.classList.add('d-none');
+      };
+      box.appendChild(d);
+    });
+  } else {
+    // Nếu không tìm thấy, cho nút Tạo mới
+    const d = document.createElement('div');
+    d.className = 'suggestion-item text-primary';
+    d.textContent = '+ Tạo khách hàng mới';
+    d.onclick = () => {
+      // quay lại form mới: reset hết ngoại trừ ID
+      const newId = generateCustomerId();
+      document.getElementById('cust_id').value      = newId;
+      document.getElementById('cust_name').value    = q;
+      document.getElementById('cust_contact').value = '';
+      document.getElementById('cust_phone').value   = '';
+      document.getElementById('cust_email').value   = '';
+      document.getElementById('cust_address').value = '';
+      document.getElementById('cust_tax').value     = '';
+      box.classList.add('d-none');
+    };
+    box.appendChild(d);
+  }
+  box.classList.remove('d-none');
+}
+    function suggestCustomer(q,fld){ const box=document.getElementById(`${fld}_sugs`); box.innerHTML=''; if(!q){ box.classList.add('d-none'); return; } const list=customers.filter(c=>(c.name||'').toLowerCase().includes(q.toLowerCase())||(c.id||'').toLowerCase().includes(q.toLowerCase())); list.forEach(c=>{ const d=document.createElement('div'); d.className='suggestion-item'; d.textContent=`${c.id} – ${c.name}`; d.onclick=()=>{ document.getElementById(fld).value=c.name; const hid=document.getElementById(`${fld}_id`); if(hid) hid.value=c.id; box.classList.add('d-none'); }; box.appendChild(d); }); box.classList.remove('d-none'); }
+    function suggestOpportunity(q,fld){ const box=document.getElementById(`${fld}_sugs`); box.innerHTML=''; if(!q){ box.classList.add('d-none'); return; } const list=opportunities.filter(o=>(o.opportunity_id||'').toLowerCase().includes(q.toLowerCase())); list.forEach(o=>{ const d=document.createElement('div'); d.className='suggestion-item'; d.textContent=o.opportunity_id; d.onclick=()=>{ document.getElementById(fld).value=o.opportunity_id; box.classList.add('d-none'); }; box.appendChild(d); }); box.classList.remove('d-none'); }
+    function suggestProject(q, fld) {
+  const box = document.getElementById(`${fld}_sugs`);
+  box.innerHTML = '';
+  // lấy customer đã chọn
+  const custId = document.getElementById('q_client_id').value;
+  if (!custId) {
+    box.innerHTML = `<div class="suggestion-item text-danger">Vui lòng chọn Khách hàng trước</div>`;
+    return box.classList.remove('d-none');
+  }
+  // lọc dự án của khách đó
+  const list = projects.filter(p =>
+    p.customer_id === custId &&
+    (
+      (p.project_name||'').toLowerCase().includes(q.toLowerCase()) ||
+      (p.project_id||'').toLowerCase().includes(q.toLowerCase())
+    )
+  );
+  if (list.length) {
+    list.forEach(p => {
+      const d = document.createElement('div');
+      d.className = 'suggestion-item';
+      d.textContent = `${p.project_id} – ${p.project_name}`;
+      d.onclick = () => {
+        document.getElementById(fld).value = p.project_name;
+        document.getElementById(`${fld}_id`).value = p.project_id;
+        box.classList.add('d-none');
+      };
+      box.appendChild(d);
+    });
+  } else {
+    // nếu không có, thêm dòng “Thêm dự án mới”
+    const d = document.createElement('div');
+    d.className = 'suggestion-item text-primary';
+    d.textContent = '+ Thêm dự án mới';
+    d.onclick = () => {
+      box.classList.add('d-none');
+      // chuyển sang tab Projects và mở form thêm mới, gán custId
+      showSection('projects');
+      openProjectForm();
+      // sau khi openProjectForm, set luôn khách hàng cho form Projects
+      setTimeout(()=>{
+        document.getElementById('pr_client_id').value = custId;
+        document.getElementById('pr_client').value = document.getElementById('q_client').value;
+      },0);
+    };
+    box.appendChild(d);
+  }
+  box.classList.remove('d-none');
+}
+
+    function suggestQuote(q,fld){ const box=document.getElementById(`${fld}_sugs`); box.innerHTML=''; if(!q){ box.classList.add('d-none'); return; } const list=quotes.filter(x=>(x.quotes_id||'').toLowerCase().includes(q.toLowerCase())); list.forEach(x=>{ const d=document.createElement('div'); d.className='suggestion-item'; d.textContent=x.quotes_id; d.onclick=()=>{ document.getElementById(fld).value=x.quotes_id; const hid=document.getElementById(`${fld}_id`); if(hid) hid.value=x.quotes_id; box.classList.add('d-none'); }; box.appendChild(d); }); box.classList.remove('d-none'); }
+
+    // ===== AUTH HELPERS =====
+    function showAuthOverlay(msg=''){ const el=document.getElementById('authOverlay'); if(msg) document.getElementById('authError').textContent=msg; el.classList.remove('d-none'); }
+    function hideAuthOverlay(){ document.getElementById('authError').textContent=''; document.getElementById('authOverlay').classList.add('d-none'); }
+
+    function applyRoleUI(){ const isElev = ['admin','BOM'].includes(currentUser.role); // hide Services always
+      const servNav = document.querySelector('#sidebarNav .nav-link[data-page="services"]'); if(servNav) servNav.parentElement.style.display='none'; const servCard=document.getElementById('kpiServicesWrap'); if(servCard) servCard.style.display='none';
+      // show/hide based on role
+      const hideForUser = ['projects','opportunities','users'];
+      hideForUser.forEach(pg=>{ const link=document.querySelector(`#sidebarNav .nav-link[data-page="${pg}"]`); if(link) link.parentElement.style.display = isElev ? '' : (pg==='users' ? 'none' : 'none'); });
+      // Users tab visibility already handled in renderUsers
+    }
+
+    async function enforceAuth(){ try{ const { data:{ user } } = await sb.auth.getUser(); if(!user){ showAuthOverlay(); return; } const { data:prof, error } = await sb.from('user_profiles').select('role, active').eq('email', user.email).single(); if(error || !prof || !prof.active){ showAuthOverlay('email đăng nhập không thuộc hệ thống VSEC; hãy liên hệ admin'); await sb.auth.signOut(); return; } currentUser = { email:user.email, role: (prof.role||'user') }; document.getElementById('currentEmail').textContent = currentUser.email; hideAuthOverlay(); await loadAll(); applyRoleUI(); renderAll(); showSection('dashboard'); }catch(e){ console.error(e); showAuthOverlay('Không thể xác thực. Vui lòng thử lại.'); } }
+
+    function renderAll(){
+      // Render all visible modules. No opportunities/quotes/contracts.
+      renderDashboard();
+      renderCustomers();
+      /* services disabled */
+      renderProjects();
+      renderReports();
+      renderSummary();
+      renderUsers();
+    }
+
+    // Sign in with Google
+    document.addEventListener('click',(e)=>{ if(e.target && e.target.id==='btnGoogle'){ sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: window.location.href } }); } });
+    sb.auth.onAuthStateChange((_event,_session)=>{ enforceAuth(); });
+
+    // NAV INIT
+    document.querySelectorAll('#sidebarNav .nav-link[data-page]').forEach(a=>{ a.addEventListener('click',()=> showSection(a.dataset.page)); });
+    const btnAddCustomerEl = document.getElementById('btnAddCustomer');
+    if(btnAddCustomerEl) btnAddCustomerEl.onclick = ()=>openCustomerForm();
+    // btnAddService removed (disabled)
+    const btnAddProjectEl = document.getElementById('btnAddProject');
+    if(btnAddProjectEl) btnAddProjectEl.onclick = ()=>openProjectForm();
+    // No opportunities/quotes/contracts modules
+    const btnAddReportEl = document.getElementById('btnAddReport');
+    if(btnAddReportEl) btnAddReportEl.onclick = ()=>openReportForm();
+    const btnAddUserEl = document.getElementById('btnAddUser');
+    if(btnAddUserEl) btnAddUserEl.onclick = ()=>openUserForm();
+
+    document.getElementById('btnSignOut').onclick = async (e)=>{ e.preventDefault(); await sb.auth.signOut(); location.reload(); };
+
+    async function init(){ await enforceAuth(); }
+    init();
+  </script>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
 </html>
-```
-
-### Changes to `index.html`
-- **Login Error Display**: The `login-error` div now includes the specific error message "Lỗi khi kiểm tra người dùng. Vui lòng thử lại." to match the screenshot. This is shown by default (`d-none` is removed in `script.js` when an error occurs).
-- **No Structural Changes**: The rest of the `index.html` remains unchanged as it already aligns with the updated `script.js` and database schema. The login page in the screenshot confirms the initial state before authentication succeeds.
-
-### Additional Considerations
-- **Timestamp Context**: Since it’s 11:08 PM on July 30, 2025, ensure the system clock on the server and client matches this time zone (+07) to avoid date-related issues in reports or tasks.
-- **Next Steps**: After resolving the authentication error, the application should proceed to the dashboard section. Test the updated features (weekly/daily reports, analysis buttons) once logged in.
-- **Documentation**: The screenshot’s footer ("© 2025 PMC. Thiết kế dành riêng cho nội bộ.") matches the HTML, confirming the version consistency.
-
-### Response to Image Explanation
-The image’s explanation (e.g., "Reports Section Updates", "Daily Report Modal") aligns with the previous `index.html` updates. No further changes are needed based on the screenshot, as it only shows the login state. The suggested future enhancements (e.g., interactive charts) can be implemented later if desired.
-
-If you need help debugging the authentication issue further or want to add visual enhancements (e.g., charts for analysis), let me know!
