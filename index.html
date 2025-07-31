@@ -625,4 +625,254 @@
         }
         
         document.getElementById('customer-alert').classList.remove('d-none');
-        setTimeout(() => document.getElementById('customer-alert').classList.add('d-none'), 3
+        setTimeout(() => document.getElementById('customer-alert').classList.add('d-none'), 3000);
+        
+        document.getElementById('customer-form').reset();
+        document.getElementById('customer-id').value = '';
+        document.getElementById('customer-cancel-btn').classList.add('d-none');
+        document.getElementById('customer-save-btn').innerText = 'Thêm Customer';
+        loadCustomers();
+      } catch (error) {
+        console.error('Error saving customer:', error);
+        alert('Có lỗi xảy ra khi lưu customer');
+      }
+    });
+
+    document.getElementById('customer-cancel-btn').addEventListener('click', function() {
+      document.getElementById('customer-form').reset();
+      document.getElementById('customer-id').value = '';
+      this.classList.add('d-none');
+      document.getElementById('customer-save-btn').innerText = 'Thêm Customer';
+    });
+
+    // Project Form
+    document.getElementById('project-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const id = document.getElementById('project-id').value;
+      const name = document.getElementById('project-name').value;
+      const customer_id = document.getElementById('project-customer').value;
+      const description = document.getElementById('project-desc').value;
+      const start_date = document.getElementById('project-start').value;
+      const end_date = document.getElementById('project-end').value;
+      
+      try {
+        if (id) {
+          await supabaseClient.from('projects').update({ 
+            name, customer_id, description, start_date, end_date 
+          }).eq('id', id);
+        } else {
+          await supabaseClient.from('projects').insert({ 
+            name, customer_id, description, start_date, end_date 
+          });
+        }
+        
+        document.getElementById('project-alert').classList.remove('d-none');
+        setTimeout(() => document.getElementById('project-alert').classList.add('d-none'), 3000);
+        
+        document.getElementById('project-form').reset();
+        document.getElementById('project-id').value = '';
+        document.getElementById('project-cancel-btn').classList.add('d-none');
+        document.getElementById('project-save-btn').innerText = 'Thêm Project';
+        loadProjects();
+      } catch (error) {
+        console.error('Error saving project:', error);
+        alert('Có lỗi xảy ra khi lưu project');
+      }
+    });
+
+    document.getElementById('project-cancel-btn').addEventListener('click', function() {
+      document.getElementById('project-form').reset();
+      document.getElementById('project-id').value = '';
+      this.classList.add('d-none');
+      document.getElementById('project-save-btn').innerText = 'Thêm Project';
+    });
+
+    // User Form
+    document.getElementById('user-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const id = document.getElementById('user-id').value;
+      const name = document.getElementById('user-name').value;
+      const email = document.getElementById('user-email').value;
+      const role = document.getElementById('user-role').value;
+      
+      try {
+        if (id) {
+          await supabaseClient.from('users').update({ name, email, role }).eq('id', id);
+        } else {
+          await supabaseClient.from('users').insert({ name, email, role });
+        }
+        
+        document.getElementById('user-alert').classList.remove('d-none');
+        setTimeout(() => document.getElementById('user-alert').classList.add('d-none'), 3000);
+        
+        document.getElementById('user-form').reset();
+        document.getElementById('user-id').value = '';
+        document.getElementById('user-cancel-btn').classList.add('d-none');
+        document.getElementById('user-save-btn').innerText = 'Thêm User';
+        loadUsers();
+      } catch (error) {
+        console.error('Error saving user:', error);
+        alert('Có lỗi xảy ra khi lưu user');
+      }
+    });
+
+    document.getElementById('user-cancel-btn').addEventListener('click', function() {
+      document.getElementById('user-form').reset();
+      document.getElementById('user-id').value = '';
+      this.classList.add('d-none');
+      document.getElementById('user-save-btn').innerText = 'Thêm User';
+    });
+
+    // Task Form
+    document.getElementById('task-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const id = document.getElementById('task-id').value;
+      const title = document.getElementById('task-title').value;
+      const project_id = document.getElementById('task-project').value;
+      const user_id = document.getElementById('task-user').value;
+      const due_date = document.getElementById('task-due').value;
+      const status = document.getElementById('task-status').value;
+      
+      try {
+        if (id) {
+          await supabaseClient.from('tasks').update({ 
+            title, project_id, user_id, due_date, status 
+          }).eq('id', id);
+        } else {
+          await supabaseClient.from('tasks').insert({ 
+            title, project_id, user_id, due_date, status 
+          });
+        }
+        
+        document.getElementById('task-alert').classList.remove('d-none');
+        setTimeout(() => document.getElementById('task-alert').classList.add('d-none'), 3000);
+        
+        document.getElementById('task-form').reset();
+        document.getElementById('task-id').value = '';
+        document.getElementById('task-cancel-btn').classList.add('d-none');
+        document.getElementById('task-save-btn').innerText = 'Thêm Task';
+        loadTasks();
+      } catch (error) {
+        console.error('Error saving task:', error);
+        alert('Có lỗi xảy ra khi lưu task');
+      }
+    });
+
+    document.getElementById('task-cancel-btn').addEventListener('click', function() {
+      document.getElementById('task-form').reset();
+      document.getElementById('task-id').value = '';
+      this.classList.add('d-none');
+      document.getElementById('task-save-btn').innerText = 'Thêm Task';
+    });
+
+    // Weekly Report Form
+    document.getElementById('weekly-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const id = document.getElementById('weekly-id').value;
+      const project_id = document.getElementById('weekly-project').value;
+      const week_start = document.getElementById('week-start').value;
+      const week_end = document.getElementById('week-end').value;
+      const summary = document.getElementById('weekly-summary').value;
+      
+      try {
+        if (id) {
+          await supabaseClient.from('weekly_reports').update({ 
+            project_id, week_start, week_end, summary 
+          }).eq('id', id);
+        } else {
+          await supabaseClient.from('weekly_reports').insert({ 
+            project_id, week_start, week_end, summary 
+          });
+        }
+        
+        document.getElementById('weekly-alert').classList.remove('d-none');
+        setTimeout(() => document.getElementById('weekly-alert').classList.add('d-none'), 3000);
+        
+        document.getElementById('weekly-form').reset();
+        document.getElementById('weekly-id').value = '';
+        document.getElementById('weekly-cancel-btn').classList.add('d-none');
+        document.getElementById('weekly-save-btn').innerText = 'Thêm Báo cáo tuần';
+        loadWeeklyReports();
+      } catch (error) {
+        console.error('Error saving weekly report:', error);
+        alert('Có lỗi xảy ra khi lưu báo cáo tuần');
+      }
+    });
+
+    document.getElementById('weekly-cancel-btn').addEventListener('click', function() {
+      document.getElementById('weekly-form').reset();
+      document.getElementById('weekly-id').value = '';
+      this.classList.add('d-none');
+      document.getElementById('weekly-save-btn').innerText = 'Thêm Báo cáo tuần';
+    });
+
+    // Additional CRUD functions
+    function editUser(id, name, email, role) {
+      document.getElementById('user-id').value = id;
+      document.getElementById('user-name').value = name;
+      document.getElementById('user-email').value = email;
+      document.getElementById('user-role').value = role;
+      document.getElementById('user-save-btn').innerText = 'Cập nhật';
+      document.getElementById('user-cancel-btn').classList.remove('d-none');
+    }
+
+    async function deleteUser(id) {
+      if (confirm('Chắc chắn xoá user này?')) {
+        await supabaseClient.from('users').delete().eq('id', id);
+        loadUsers();
+      }
+    }
+
+    function editTask(id, title, projectId, userId, dueDate, status) {
+      document.getElementById('task-id').value = id;
+      document.getElementById('task-title').value = title;
+      document.getElementById('task-project').value = projectId;
+      document.getElementById('task-user').value = userId;
+      document.getElementById('task-due').value = dueDate;
+      document.getElementById('task-status').value = status;
+      document.getElementById('task-save-btn').innerText = 'Cập nhật';
+      document.getElementById('task-cancel-btn').classList.remove('d-none');
+    }
+
+    async function deleteTask(id) {
+      if (confirm('Chắc chắn xoá task này?')) {
+        await supabaseClient.from('tasks').delete().eq('id', id);
+        loadTasks();
+      }
+    }
+
+    function editWeekly(id, projectId, weekStart, weekEnd, summary) {
+      document.getElementById('weekly-id').value = id;
+      document.getElementById('weekly-project').value = projectId;
+      document.getElementById('week-start').value = weekStart;
+      document.getElementById('week-end').value = weekEnd;
+      document.getElementById('weekly-summary').value = summary;
+      document.getElementById('weekly-save-btn').innerText = 'Cập nhật';
+      document.getElementById('weekly-cancel-btn').classList.remove('d-none');
+    }
+
+    async function deleteWeekly(id) {
+      if (confirm('Chắc chắn xoá báo cáo tuần này?')) {
+        await supabaseClient.from('weekly_reports').delete().eq('id', id);
+        loadWeeklyReports();
+      }
+    }
+
+    // Auth state listener
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        currentUser = session.user;
+        showMainApp();
+      } else if (event === 'SIGNED_OUT') {
+        currentUser = null;
+        showAuthScreen();
+      }
+    });
+
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', () => {
+      initAuth();
+    });
+  </script>
+</body>
+</html>
