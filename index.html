@@ -333,11 +333,23 @@
     // Authentication functions
     async function initAuth() {
       // Check if there's a hash fragment with auth data
-      if (window.location.hash) {
-        console.log('Hash detected, processing auth...');
-        // Let Supabase handle the hash fragment
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+     if (window.location.hash) {
+  console.log('Hash detected, processing auth...');
+  const { data, error } = await supabaseClient.auth.getSessionFromUrl();
+  if (error) {
+    console.error('Error processing session from URL hash:', error.message);
+  } else {
+    console.log('Session loaded from URL:', data.session);
+  }
+}if (window.location.hash) {
+  console.log('Hash detected, processing auth...');
+  const { data, error } = await supabaseClient.auth.getSessionFromUrl();
+  if (error) {
+    console.error('Error processing session from URL hash:', error.message);
+  } else {
+    console.log('Session loaded from URL:', data.session);
+  }
+}
       
       const { data: { session } } = await supabaseClient.auth.getSession();
       console.log('Current session:', session);
